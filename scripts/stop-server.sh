@@ -6,4 +6,4 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
 echo "Stopping Facebook US News Automation (n8n)..."
 docker compose down
-echo "Done. Server stopped. Fix API keys, then: docker compose up -d"
+echo "Done. Server stopped. Fix API keys, then: cd ~/awraaq_sgid && docker compose up -d"

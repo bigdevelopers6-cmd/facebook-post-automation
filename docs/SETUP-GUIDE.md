@@ -83,16 +83,42 @@ newgrp docker
 
 ---
 
-## Part C — Deploy n8n
+## Step 2 — Clone on AWS server (rename to `awraaq_sgid`)
 
-On the server:
+SSH into your EC2 instance and run **in this order**:
 
 ```bash
-mkdir -p ~/facebook-news-automation/data/reports
-cd ~/facebook-news-automation
+cd ~
+
+# Clone from GitHub
+git clone https://github.com/bigdevelopers6-cmd/facebook-post-automation.git
+
+# Rename project folder (use this name for all commands below)
+mv facebook-post-automation awraaq_sgid
+
+cd ~/awraaq_sgid
+mkdir -p data/reports
 ```
 
-Upload this project folder (or `git clone` your repo) so these files exist:
+Confirm files exist:
+
+```bash
+ls -la
+# docker-compose.yml  workflow/  scripts/  docs/
+```
+
+---
+
+## Part C — Deploy n8n
+
+On the server (always work inside **`~/awraaq_sgid`**):
+
+```bash
+cd ~/awraaq_sgid
+mkdir -p data/reports
+```
+
+Required files in this folder:
 
 - `docker-compose.yml`
 - `workflow/facebook-us-news-automation.json`
@@ -462,7 +488,7 @@ When **any** production gate fails, you receive SMTP email from **`emailProducti
 On the server, run:
 
 ```bash
-cd ~/facebook-news-automation
+cd ~/awraaq_sgid
 ./scripts/stop-server.sh
 # same as: docker compose down
 ```

@@ -154,7 +154,7 @@ Clears `errorLog` from static data. Resets `consecutiveFailures` to 0, `circuitB
 Not an n8n command — run on your VPS:
 
 ```bash
-cd ~/facebook-news-automation
+cd ~/awraaq_sgid
 ./scripts/stop-server.sh
 ```
 

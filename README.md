@@ -21,18 +21,19 @@ See [docs/POSTING-LAYERS.md](docs/POSTING-LAYERS.md) for the full layer diagram.
 
 **Recommended hosting:** Hetzner CX22 in Ashburn, VA (~$6–8/mo). Full page naming and VPS steps: [docs/SETUP-GUIDE.md](docs/SETUP-GUIDE.md).
 
-## Quick Start
+## Quick Start (AWS server)
 
 ```bash
-# 1. Start n8n
+cd ~
+git clone https://github.com/bigdevelopers6-cmd/facebook-post-automation.git
+mv facebook-post-automation awraaq_sgid
+cd ~/awraaq_sgid
+mkdir -p data/reports
+# edit docker-compose.yml, then:
 docker compose up -d
-
-# 2. Open http://localhost:5678
-# 3. Import workflow/facebook-us-news-automation.json
-# 4. Configure credentials (see docs/SETUP-GUIDE.md)
-# 5. Test with /auto test-one
-# 6. Activate workflow
 ```
+
+Then open `http://YOUR_PUBLIC_IP:5678`, import `workflow/facebook-us-news-automation.json`, configure credentials (see [docs/SETUP-GUIDE.md](docs/SETUP-GUIDE.md)), run `/auto test-one`, activate workflow.
 
 ## Deliverables
 

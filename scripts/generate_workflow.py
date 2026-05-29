@@ -790,7 +790,7 @@ return [{
   json: {
     ...item,
     emailSubject: '[US News Bot] STOP SERVER — Production halted (API / cost guard)',
-    emailBody: `The workflow has been HALTED to prevent further API charges.\n\nTime (ET): ${et}\n\n=== WHAT HAPPENED ===\n${item.failureSummary || staticData.productionHaltReason || 'API validation failed'}\n\nFailed APIs:\n${JSON.stringify(failures, null, 2)}\n\n=== SHUTDOWN STEPS (do this now) ===\n1. SSH into your VPS\n2. cd ~/facebook-news-automation\n3. ./scripts/stop-server.sh\n   (same as: docker compose down)\n\n=== AFTER FIXING KEYS ===\n1. docker compose up -d\n2. n8n → /auto reset-errors\n3. /auto health-check (all 4 APIs must pass)\n4. /auto test-one\n5. Re-activate workflow\n\nNo further post emails will be sent until the server is back and keys are fixed.`,
+    emailBody: `The workflow has been HALTED to prevent further API charges.\n\nTime (ET): ${et}\n\n=== WHAT HAPPENED ===\n${item.failureSummary || staticData.productionHaltReason || 'API validation failed'}\n\nFailed APIs:\n${JSON.stringify(failures, null, 2)}\n\n=== SHUTDOWN STEPS (do this now) ===\n1. SSH into your VPS\n2. cd ~/awraaq_sgid\n3. ./scripts/stop-server.sh\n   (same as: docker compose down)\n\n=== AFTER FIXING KEYS ===\n1. docker compose up -d\n2. n8n → /auto reset-errors\n3. /auto health-check (all 4 APIs must pass)\n4. /auto test-one\n5. Re-activate workflow\n\nNo further post emails will be sent until the server is back and keys are fixed.`,
   }
 }];
 """
