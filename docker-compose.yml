@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: facebook-news-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    # Production cost guard: if API keys fail, workflow halts — run scripts/stop-server.sh
+    environment:
+      - TZ=America/New_York
+      - GENERIC_TIMEZONE=America/New_York
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_ALERT_FROM=alerts@yourdomain.com
+      - N8N_ALERT_TO=owner@yourdomain.com
+      - FB_PAGE_ID=YOUR_PAGE_ID_HERE
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./data/reports:/data/reports
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  n8n_data:
