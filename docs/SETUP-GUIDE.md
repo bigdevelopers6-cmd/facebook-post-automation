@@ -156,13 +156,23 @@ You need a **Facebook Page** (not a personal profile). The automation posts **as
 
 ### D.1 Page name (display name)
 
+This automation posts **US politics + celebrity news only**. See **[BRAND-GUIDE.md](BRAND-GUIDE.md)** for recommended names, @usernames, colors, and emoji rules.
+
+**Top picks:**
+
+| Display name | @username |
+|--------------|-----------|
+| **Power & Fame Daily** | `powerfamedaily` |
+| **Capitol & Spotlight** | `capitolspotlight` |
+| **Awraaq Power & Fame** | `awraaqpowerfame` |
+
 Pick **one** pattern and use it consistently:
 
 | Style | Example page name |
 |--------|-------------------|
-| Neutral news | **US Daily Brief** |
-| City-focused | **America News Desk** |
-| Niche | **US Tech & Policy Today** |
+| Politics + celebrities | **Power & Fame Daily** |
+| DC + Hollywood | **Capitol & Spotlight** |
+| Branded | **Awraaq Power & Fame** |
 
 **Rules:**
 - 0–75 characters

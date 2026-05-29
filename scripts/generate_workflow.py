@@ -169,7 +169,22 @@ return [{ json: { stored: true, slotCount: schedule.length } }];
 FILTER_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
-const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];
+const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];
+
+const TOPIC_KEYWORDS = {
+  politics: /politic|election|congress|senate|house|white house|president|governor|vote|campaign|capitol|democrat|republican|legislation|supreme court/i,
+  celebrities: /celebrity|hollywood|actor|actress|singer|star|entertainment|fame|red carpet|grammy|oscar|kardashian|royal|influencer|premiere|pop culture/i,
+};
+
+function topicScore(article) {
+  const text = `${article.title || ''} ${article.description || ''}`;
+  let score = 0;
+  if (TOPIC_KEYWORDS.politics.test(text)) score += 2;
+  if (TOPIC_KEYWORDS.celebrities.test(text)) score += 2;
+  if (article._topic === 'politics' && TOPIC_KEYWORDS.politics.test(text)) score += 1;
+  if (article._topic === 'celebrities' && TOPIC_KEYWORDS.celebrities.test(text)) score += 1;
+  return score;
+}
 
 function getDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -192,9 +207,21 @@ function priorityScore(article) {
 const primary = $input.first().json.articles || [];
 let filtered = primary.filter(isValid)
   .filter(a => !postedURLs.includes(a.url))
-  .sort((a, b) => priorityScore(b) - priorityScore(a));
+  .filter(a => topicScore(a) > 0)
+  .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));
 
-const output = filtered.slice(0, 10).map(a => ({
+// Prefer mix: up to 6 politics + 6 celebrities, then fill to 10
+const politics = filtered.filter(a => TOPIC_KEYWORDS.politics.test(`${a.title} ${a.description}`) || a._topic === 'politics');
+const celebs = filtered.filter(a => !politics.includes(a));
+let mixed = [...politics.slice(0, 6), ...celebs.slice(0, 6)];
+const seen = new Set(mixed.map(a => a.url));
+for (const a of filtered) {
+  if (mixed.length >= 10) break;
+  if (!seen.has(a.url)) { mixed.push(a); seen.add(a.url); }
+}
+mixed = mixed.slice(0, 10);
+
+const output = mixed.map(a => ({
   title: a.title,
   description: a.description,
   url: a.url,
@@ -207,7 +234,7 @@ return [{
   json: {
     articles: output,
     needed: 10 - output.length,
-    category: $('fetchUSNews').first().json._category || 'general',
+    category: 'politics+celebrities',
   }
 }];
 """
@@ -467,7 +494,8 @@ return [{ json: { skipped: true, reason: 'SKIPPED_COMPLIANCE', url: $input.first
 """
 
 BUILD_IMAGE_PROMPT = r"""const item = $input.first().json;
-const imagePrompt = `Photorealistic editorial news photograph illustrating: ${item.title}. Professional news photography style, natural lighting, no text, no logos, no watermarks, no people holding signs, no UI elements. Suitable for a mainstream US news Facebook page.`;
+const topic = item._topic || 'news';
+const imagePrompt = `Photorealistic candid US ${topic} news photograph about: ${item.title}. Natural unstaged moment, real people and environments, soft daylight, shallow depth of field, looks like a professional press photo taken on location — not AI art, not illustration. Consistent brand color grading on every post: warm golden yellow highlights, rich red accents, and deep green tones in clothing, decor, lighting, or background. Cohesive yellow-red-green palette across the frame. Authentic Facebook news Page aesthetic, relatable and human. NO text, NO logos, NO watermarks, NO signs with words, NO graphic design layout, NO cartoon, NO embedded emoji characters painted in the image.`;
 return [{ json: { ...item, imagePrompt } }];
 """
 
@@ -684,9 +712,16 @@ return [{ json: { command: 'reset-errors', cleared: true } }];
 AUTO_HEALTH_CHECK = r"""return [{ json: { command: 'health-check', pingApis: true } }];
 """
 
-CATEGORY_PREP = r"""const categories = ['technology','business','health','science','entertainment'];
-const category = categories[Math.floor(Date.now() / 86400000) % 5];
-return [{ json: { category } }];
+CATEGORY_PREP = r"""return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];
+"""
+
+MERGE_NEWS_FEEDS = r"""const politics = $('fetchPoliticsNews').first().json.articles || [];
+const celebrities = $('fetchCelebritiesNews').first().json.articles || [];
+const articles = [
+  ...politics.map(a => ({ ...a, _topic: 'politics' })),
+  ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),
+];
+return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
 """
 
 REWRITE_EXTRACT = r"""const response = $input.first().json;
@@ -919,10 +954,28 @@ N["emailDailyRunStarted"] = add_node(smtp_email(
     notes="SMTP: daily schedule confirmed, APIs healthy",
 ))
 
-# === NEWS FETCHER ===
+# === NEWS FETCHER (politics + celebrities only) ===
 N["prepareCategory"] = add_node(node("prepareCategory", "n8n-nodes-base.code", [X(3), Y0 + 160], {"jsCode": CATEGORY_PREP}, typeVersion=2))
-N["fetchUSNews"] = add_node(node(
-    "fetchUSNews", "n8n-nodes-base.httpRequest", [X(4), Y0],
+N["fetchPoliticsNews"] = add_node(node(
+    "fetchPoliticsNews", "n8n-nodes-base.httpRequest", [X(4), Y0],
+    {
+        "method": "GET",
+        "url": "https://newsapi.org/v2/everything",
+        "sendQuery": True,
+        "queryParameters": {"parameters": [
+            {"name": "q", "value": "(politics OR election OR Congress OR Senate OR \"White House\" OR President) AND United States"},
+            {"name": "language", "value": "en"},
+            {"name": "sortBy", "value": "publishedAt"},
+            {"name": "pageSize", "value": "25"},
+        ]},
+        "sendHeaders": True,
+        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]},
+    },
+    typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
+    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+))
+N["fetchCelebritiesNews"] = add_node(node(
+    "fetchCelebritiesNews", "n8n-nodes-base.httpRequest", [X(5), Y0],
     {
         "method": "GET",
         "url": "https://newsapi.org/v2/top-headlines",
@@ -930,20 +983,20 @@ N["fetchUSNews"] = add_node(node(
         "queryParameters": {"parameters": [
             {"name": "country", "value": "us"},
             {"name": "language", "value": "en"},
-            {"name": "pageSize", "value": "30"},
-            {"name": "category", "value": "={{ $json.category }}"},
+            {"name": "category", "value": "entertainment"},
+            {"name": "pageSize", "value": "25"},
         ]},
         "sendHeaders": True,
         "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]},
-        "options": {},
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
 ))
-N["tagCategory"] = add_node(node("tagCategory", "n8n-nodes-base.code", [X(5), Y0], {
-    "jsCode": "const cat = $('prepareCategory').first().json.category;\nreturn [{ json: { ...$input.first().json, _category: cat } }];"
+N["mergeNewsFeeds"] = add_node(node("mergeNewsFeeds", "n8n-nodes-base.code", [X(6), Y0], {"jsCode": MERGE_NEWS_FEEDS}, typeVersion=2))
+N["tagCategory"] = add_node(node("tagCategory", "n8n-nodes-base.code", [X(7), Y0], {
+    "jsCode": "return [{ json: { ...$input.first().json, _category: 'politics+celebrities' } }];"
 }, typeVersion=2))
-N["filterArticles"] = add_node(node("filterArticles", "n8n-nodes-base.code", [X(6), Y0], {"jsCode": FILTER_ARTICLES}, typeVersion=2))
+N["filterArticles"] = add_node(node("filterArticles", "n8n-nodes-base.code", [X(8), Y0], {"jsCode": FILTER_ARTICLES}, typeVersion=2))
 N["checkNeedsFallback"] = add_node(node(
     "checkNeedsFallback", "n8n-nodes-base.if", [X(7), Y0],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -958,7 +1011,7 @@ N["fetchFallbackNews"] = add_node(node(
         "url": "https://newsapi.org/v2/everything",
         "sendQuery": True,
         "queryParameters": {"parameters": [
-            {"name": "q", "value": "US news"},
+            {"name": "q", "value": "(US politics OR election OR celebrity OR Hollywood) AND United States"},
             {"name": "language", "value": "en"},
             {"name": "sortBy", "value": "publishedAt"},
             {"name": "pageSize", "value": "20"},
@@ -1056,16 +1109,21 @@ N["emailImageFallbackUsed"] = add_node(smtp_email(
 
 # === CONTENT GENERATOR ===
 CAPTION_SYSTEM = (
-    "You are a professional US social media editor for a high-traffic Facebook news page. "
-    "Your audience is American adults aged 25–45. Write exclusively in American English. "
-    "Never mention AI, automation, or that this post was generated. Each caption must: "
-    "(1) open with a strong hook that references something culturally relevant to the US audience, "
-    "(2) summarize the news in plain conversational language in 1–2 sentences, "
-    "(3) end with a thought-provoking question that invites Americans to share their opinion, "
-    "(4) include exactly 3 hashtags that are trending and relevant to the US news cycle. "
-    "Vary your tone across: informative, surprising, opinionated, empathetic — match the tone to the story. "
-    "Never use corporate jargon. Never use the word 'crucial', 'delve', 'groundbreaking', or 'game-changer'. "
-    "Output only the caption text, nothing else."
+    "You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. "
+    "Your audience is US adults 25–45 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. "
+    "Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: "
+    "(1) open with a strong hook tied to US political or celebrity culture, "
+    "(2) summarize the story in 1–2 plain conversational sentences, "
+    "(3) end with a thought-provoking question inviting Americans to comment, "
+    "(4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), "
+    "(5) include exactly 1–2 emojis placed naturally in the caption (not more than two; match the story mood). "
+    "Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. "
+    "Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text."
+)
+
+IMAGE_GEN_PROMPT_SUFFIX = (
+    ". Photorealistic candid US news photo, natural unstaged lighting, cohesive brand colors: warm yellow highlights, red accents, deep green tones. "
+    "Authentic press-photo feel, NOT illustration, NO text, NO logos, NO watermarks, NO emoji characters in the image."
 )
 
 N["generateCaption"] = add_node(node(
@@ -1081,7 +1139,7 @@ N["generateCaption"] = add_node(node(
         ]},
         "sendBody": True,
         "specifyBody": "json",
-        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 350, system: "' + CAPTION_SYSTEM.replace('"', '\\"') + '", messages: [{ role: "user", content: "Write a Facebook caption for this news article:\\nTitle: " + $json.title + "\\nDescription: " + $json.description + "\\nSource: " + $json.source.name }] }) }}',
+        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 350, system: "' + CAPTION_SYSTEM.replace('"', '\\"') + '", messages: [{ role: "user", content: "Write a Facebook caption for this US politics/celebrity story:\\nTopic: " + ($json._topic || "news") + "\\nTitle: " + $json.title + "\\nDescription: " + $json.description + "\\nSource: " + $json.source.name }] }) }}',
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1210,7 +1268,7 @@ N["generateImage"] = add_node(node(
         ]},
         "sendBody": True,
         "specifyBody": "json",
-        "jsonBody": '={{ JSON.stringify({ model: "gpt-image-1", quality: "high", size: "1536x1024", n: 1, prompt: "Photorealistic editorial news photograph illustrating: " + $json.title + ". Professional news photography style, natural lighting, no text, no logos, no watermarks, no people holding signs, no UI elements. Suitable for a mainstream US news Facebook page." }) }}',
+        "jsonBody": '={{ JSON.stringify({ model: "gpt-image-1", quality: "high", size: "1536x1024", n: 1, prompt: $json.imagePrompt || ("Photorealistic candid US news photo: " + $json.title + "' + IMAGE_GEN_PROMPT_SUFFIX.replace('"', '\\"') + '") }) }}',
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "OPENAI_API_KEY", "name": "OPENAI_API_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1456,8 +1514,10 @@ wire("emailDailyRunStarted", "prepareCategory")
 wire("productionGatePass", "haltProduction", 1)
 wire("haltProduction", "prepareHaltEmail")
 wire("prepareHaltEmail", "emailProductionHalted")
-wire("prepareCategory", "fetchUSNews")
-wire("fetchUSNews", "tagCategory", 0)
+wire("prepareCategory", "fetchPoliticsNews")
+wire("fetchPoliticsNews", "fetchCelebritiesNews")
+wire("fetchCelebritiesNews", "mergeNewsFeeds")
+wire("mergeNewsFeeds", "tagCategory")
 wire("tagCategory", "filterArticles")
 wire("filterArticles", "checkNeedsFallback")
 wire("checkNeedsFallback", "fetchFallbackNews", 0)  # true = needs fallback
