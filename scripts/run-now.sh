@@ -12,9 +12,16 @@ POLL_INTERVAL="${POLL_INTERVAL:-3}"
 WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v13-viral-image}"
 
 n8n_login() {
-  curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
+  local code
+  code=$(curl -s -o /tmp/n8n-login.json -w "%{http_code}" -c /tmp/n8n-cookies.txt \
+    -X POST http://localhost:5678/rest/login \
     -H "Content-Type: application/json" \
-    -d "{\"emailOrLdapLoginId\":\"$N8N_EMAIL\",\"password\":\"$N8N_PASSWORD\"}" > /dev/null
+    -d "{\"emailOrLdapLoginId\":\"$N8N_EMAIL\",\"password\":\"$N8N_PASSWORD\"}")
+  if [ "$code" != "200" ]; then
+    echo "[!!] FAILED  n8n login HTTP $code (check N8N_EMAIL / N8N_PASSWORD)"
+    cat /tmp/n8n-login.json 2>/dev/null || true
+    exit 1
+  fi
 }
 
 fetch_latest_execution_id() {
@@ -52,10 +59,14 @@ fetch_execution_json() {
     "http://localhost:5678/rest/executions/${id}?includeData=true" -o /tmp/exec.json
 }
 
+# shellcheck source=scripts/lib-grep-count.sh
+source "$(dirname "$0")/lib-grep-count.sh"
+
 preflight() {
-  local markers
-  markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  v13=$(grep -c 'trace-v13-viral-image' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  local wf=workflow/facebook-us-news-automation.json
+  local markers v13
+  markers=$(grep_count 'function pipelineLog' "$wf")
+  v13=$(grep_count 'trace-v13-viral-image' "$wf")
   echo "Workflow: trace-v13=$v13 pipelineLog-fn=$markers (want v13>=1, fn=0)"
   if [ "${v13:-0}" -lt 1 ]; then
     echo "[!!] FAILED  OLD workflow JSON on server (need trace-v13-viral-image)."
@@ -65,6 +76,16 @@ preflight() {
   echo "[OK]  Trace will be in execution JSON (staticData.pipelineLog)"
 }
 
+ensure_n8n_up() {
+  if curl -sf http://localhost:5678/healthz >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "[!!] FAILED  n8n is not running on http://localhost:5678"
+  echo "        Fix: bash scripts/server-restart.sh"
+  echo "        (Do not use 'docker compose up -d --force-recreate' alone — it can leave a name conflict.)"
+  exit 1
+}
+
 echo "=============================================="
 echo " Facebook US News Bot — Manual test post"
 echo " Build expect: $WORKFLOW_BUILD_EXPECT"
@@ -72,6 +93,7 @@ echo "=============================================="
 echo ""
 
 preflight
+ensure_n8n_up
 n8n_login
 
 TRIGGER_EPOCH=$(date +%s)

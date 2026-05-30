@@ -164,7 +164,11 @@ fi
 # Docker env sanity
 echo ""
 echo "[docker] FB_ACCESS_TOKEN inside n8n container:"
-docker exec facebook-news-n8n sh -c 'echo "${FB_ACCESS_TOKEN:0:12}...${FB_ACCESS_TOKEN: -8}"' 2>/dev/null || echo "(container not running)"
+if docker ps --format '{{.Names}}' | grep -qx facebook-news-n8n; then
+  docker exec facebook-news-n8n sh -c 'echo "${FB_ACCESS_TOKEN:0:12}...${FB_ACCESS_TOKEN: -8}"'
+else
+  echo "(container not running — run: bash scripts/server-restart.sh)"
+fi
 
 echo ""
 echo "[OK]  Token is ready for automation."
