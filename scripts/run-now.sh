@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v7-webhook-assert}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v7b-token-publish}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -55,8 +55,8 @@ fetch_execution_json() {
 preflight() {
   local markers
   markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  v7=$(grep -c 'trace-v7-webhook-assert' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  echo "Workflow: trace-v7=$v7 pipelineLog-fn=$markers (want v7>=1, fn=0)"
+  v7=$(grep -c 'trace-v7b-token-publish' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  echo "Workflow: trace-v7b=$v7 pipelineLog-fn=$markers (want v7b>=1, fn=0)"
   if [ "${v7:-0}" -lt 1 ]; then
     echo "[!!] FAILED  OLD workflow JSON on server."
     echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
@@ -153,20 +153,24 @@ python3 << PY
 import json, re, sys
 from pathlib import Path
 sys.path.insert(0, str(Path("scripts").resolve()))
-from n8n_exec_parse import extract_execution_error
+from n8n_exec_parse import extract_execution_error, runtime_publish_ok
 try:
     root = json.load(open("/tmp/exec.json"))
     raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
     errs = extract_execution_error(root, raw)
     text = " ".join(errs)
-    if "PUBLISH_OK" in text:
-        print("\n[OK]  POST LIKELY SUCCEEDED (PUBLISH_OK in trace)")
-    elif re.search(r"HALT|GATE healthy=false|0 articles|FILTER_|MERGE_|SKIP_HALTED", text, re.I):
-        print("\n[!!] ROOT CAUSE — see Pipeline trace section above")
+    if "WEBHOOK_TEST_NO_POST" in text or "WEBHOOK_TEST_NO_POST" in raw:
+        print("\n[!!] NO POST — read 'data.error' / Trace above")
+        if "SKIP_TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
+            print("    Likely fix: renew FB_ACCESS_TOKEN in .env, then docker compose up -d")
+        elif "BLOCKED_PUBLISH" in text:
+            print("    Likely fix: caption/LLM keys (ANTHROPIC/GROQ/GEMINI) or image gate")
+    elif runtime_publish_ok(raw):
+        print("\n[OK]  POST SUCCEEDED (PUBLISH_OK postId= in execution)")
     elif "${STATUS}" == "error":
-        print("\n[!!] Execution ERROR — see section 1 in report (trace-v5 bypasses gate on webhook)")
+        print("\n[!!] Execution ERROR — see data.error in report above")
     elif int("${ELAPSED:-99}") < 8:
-        print("\n[!!] Fast finish — likely gate halt or empty articles")
+        print("\n[!!] Fast finish — token skip, blocked publish, or empty articles")
 except Exception as e:
     print("\n[!!] Could not parse trace:", e)
 PY

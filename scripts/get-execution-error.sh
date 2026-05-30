@@ -31,7 +31,7 @@ import json, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path("scripts").resolve()))
-from n8n_exec_parse import extract_execution_error, parse_execution, scan_raw_execution
+from n8n_exec_parse import extract_execution_error, parse_execution, scan_raw_execution, runtime_publish_ok
 
 root = json.load(open("/tmp/exec.json"))
 raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
@@ -60,8 +60,9 @@ if hints.get("pipeline_lines"):
         print(" ", ln[:200])
 if "WEBHOOK_TEST_NO_POST" in raw:
     print("\n[!!] WEBHOOK_TEST_NO_POST — loop finished without Facebook publish")
-if "PUBLISH_OK" in raw:
-    print("\n[OK] PUBLISH_OK found in execution data")
+    print("    (PUBLISH_OK in blob below is often workflow JSON — ignore unless postId= digits)")
+if runtime_publish_ok(raw):
+    print("\n[OK] Real publish: PUBLISH_OK postId=<numeric> in execution data")
 PY
 
 echo ""

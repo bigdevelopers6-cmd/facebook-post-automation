@@ -74,6 +74,12 @@ def parse_execution(root: dict) -> Tuple[dict, Optional[str], Optional[str], dic
     return (run if isinstance(run, dict) else {}), last, status, data
 
 
+def runtime_publish_ok(raw_text: str) -> bool:
+    """True only when execution data shows a real post id, not workflow jsCode."""
+    import re
+    return bool(re.search(r"PUBLISH_OK postId=\d{8,}", raw_text))
+
+
 def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
     """Best-effort error messages from n8n execution payload."""
     import re
@@ -84,7 +90,12 @@ def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
         err = data.get("error")
         if err:
             if isinstance(err, dict):
-                lines.append(f"data.error: {err.get('message', err)}")
+                msg = err.get("message", err)
+                lines.append(f"data.error: {msg}")
+                if "WEBHOOK_TEST_NO_POST" in str(msg):
+                    lines.append("--- webhook failure (actionable) ---")
+                    if "Trace:" in str(msg):
+                        lines.append(str(msg).split("Trace:", 1)[-1].strip()[:1200])
             else:
                 lines.append(f"data.error: {err}")
 

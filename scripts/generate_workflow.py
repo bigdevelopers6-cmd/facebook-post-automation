@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7-webhook-assert"
+WORKFLOW_BUILD = "2026-05-30-trace-v7b-token-publish"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -542,6 +542,8 @@ return [{
 
 LOG_BLOCKED_PUBLISH = r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
+const __sdB=$getWorkflowStaticData('global');
+(__sdB.pipelineLog=__sdB.pipelineLog||[]).push('BLOCKED_PUBLISH: caption='+(item.caption?'yes':'no')+' image='+(item.finalImageUrl?'yes':'no')+' approved='+item.aiCaptionApproved);
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -811,6 +813,8 @@ return [{ json: { ...item, rewriteAttempt: attempt } }];
 """
 
 LOG_SKIPPED = r"""const staticData = $getWorkflowStaticData('global');
+const __sdC=$getWorkflowStaticData('global');
+(__sdC.pipelineLog=__sdC.pipelineLog||[]).push('SKIP_COMPLIANCE');
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -936,6 +940,9 @@ PARSE_FB_TOKEN = r"""const response = $input.first().json;
 const err = response.error || (response.errors && response.errors[0]);
 const isValid = !!(response.id && !err);
 const item = $('prepareSlotWait').first().json;
+const isWebhookTest = item.windowLabel === 'test_one';
+const __sdT=$getWorkflowStaticData('global');
+(__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: valid='+isValid+' test='+isWebhookTest+' detail='+String(err ? JSON.stringify(err).slice(0,120) : (response.id||'ok')));
 if (!isValid) {
   const staticData = $getWorkflowStaticData('global');
   staticData.errorLog = staticData.errorLog || [];
@@ -947,10 +954,16 @@ if (!isValid) {
     article_url: item.url,
   });
 }
-return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting: !isValid, tokenCheckDetail: err || response.id } }];
+const skipPosting = isWebhookTest ? false : !isValid;
+if (isWebhookTest && !isValid) {
+  (__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: webhook test will still try publish (fix FB_ACCESS_TOKEN)');
+}
+return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting, tokenCheckDetail: err || response.id } }];
 """
 
 SKIP_INVALID_TOKEN = r"""const staticData = $getWorkflowStaticData('global');
+const __sdSk=$getWorkflowStaticData('global');
+(__sdSk.pipelineLog=__sdSk.pipelineLog||[]).push('SKIP_TOKEN_INVALID');
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -1092,7 +1105,10 @@ if (wasWebhook) {
   const published = log.some(l => String(l).includes('PUBLISH_OK'));
   if (!published) {
     const trace = log.slice(-25).join(' | ');
-    throw new Error('WEBHOOK_TEST_NO_POST: Facebook publish never ran. Trace: ' + trace);
+    throw new Error(
+      'WEBHOOK_TEST_NO_POST: No Facebook publish. Trace: ' + trace +
+      ' | Hints: SKIP_TOKEN_INVALID=renew FB_ACCESS_TOKEN; BLOCKED_PUBLISH=missing caption/image; SKIP_HALTED=production halt'
+    );
   }
 }
 return [{ json: { webhookAssert: wasWebhook ? 'posted' : 'scheduled_done', trace: log.slice(-30) } }];
