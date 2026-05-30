@@ -833,9 +833,21 @@ return [{ json: { updated: true, url } }];
 """
 
 PARSE_FB_TOKEN = r"""const response = $input.first().json;
-const isValid = !!(response.id && !response.error);
+const err = response.error || (response.errors && response.errors[0]);
+const isValid = !!(response.id && !err);
 const item = $('prepareSlotWait').first().json;
-return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting: !isValid } }];
+if (!isValid) {
+  const staticData = $getWorkflowStaticData('global');
+  staticData.errorLog = staticData.errorLog || [];
+  staticData.errorLog.push({
+    timestamp: new Date().toISOString(),
+    node_name: 'parseFBToken',
+    error_code: 'TOKEN_CHECK_FAILED',
+    error_message: err ? JSON.stringify(err).slice(0, 300) : JSON.stringify(response).slice(0, 300),
+    article_url: item.url,
+  });
+}
+return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting: !isValid, tokenCheckDetail: err || response.id } }];
 """
 
 SKIP_INVALID_TOKEN = r"""const staticData = $getWorkflowStaticData('global');
@@ -912,7 +924,7 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = r"""const staticData = $getWorkflowStaticData('global');
 staticData.todaySchedule = [{
   slotIndex: 1,
-  epochMs: Date.now() + 3000,
+  epochMs: Date.now() + 1000,
   windowLabel: 'test_one',
   scheduledEt: 'now',
 }];
@@ -1282,7 +1294,7 @@ N["checkFBToken"] = add_node(node(
             {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
         ]},
     },
-    typeVersion=4.2, onError="continueErrorOutput",
+    typeVersion=4.2, onError="continueRegularOutput",
 ))
 N["parseFBToken"] = add_node(node("parseFBToken", "n8n-nodes-base.code", [X(5), Y1], {"jsCode": PARSE_FB_TOKEN}, typeVersion=2))
 N["tokenGate"] = add_node(node(
@@ -1719,6 +1731,7 @@ wire("checkHalted", "waitForSlot", 1)  # not halted
 wire("skipHalted", "loopBack")
 wire("waitForSlot", "checkFBToken")
 wire("checkFBToken", "parseFBToken", 0)
+wire("checkFBToken", "parseFBToken", 1)
 wire("parseFBToken", "tokenGate")
 wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token expired
 wire("prepareTokenAlertEmail", "emailTokenExpired")
@@ -1747,8 +1760,8 @@ wire("captionReviewReadyGate", "logBlockedPublish", 1)
 wire("buildImagePrompt", "imageReview")
 wire("imageReview", "parseImageReview", 0)
 wire("parseImageReview", "imageReviewGate")
-wire("imageReviewGate", "slotApiGateOpenAI", 0)  # approved prompt — verify OpenAI before image $
-wire("imageReviewGate", "applyImageFallback", 1)  # rejected — fallback skips OpenAI
+wire("imageReviewGate", "applyImageFallback", 0)  # use NewsAPI image (skip OpenAI DALL-E)
+wire("imageReviewGate", "applyImageFallback", 1)  # rejected prompt — still use NewsAPI image
 wire("applyImageFallback", "prepareImageFallbackEmail")
 wire("prepareImageFallbackEmail", "emailImageFallbackUsed")
 wire("emailImageFallbackUsed", "mergeImagePaths")
