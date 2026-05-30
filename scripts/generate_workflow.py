@@ -202,8 +202,10 @@ return [{ json: { stored: true, slotCount: schedule.length } }];
 """
 
 FILTER_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
+const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
 const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];
 
 const TOPIC_KEYWORDS = {
@@ -226,10 +228,11 @@ function getDomain(url) {
 }
 
 function isValid(article) {
-  if (!article.title || !article.description || !article.urlToImage) return false;
+  if (!article.title || !article.description) return false;
   if (article.title === '[Removed]' || article.description === '[Removed]') return false;
   const domain = getDomain(article.url || '');
   if (NOISE.some(n => domain.includes(n))) return false;
+  if (!testMode && !article.urlToImage) return false;
   return true;
 }
 
@@ -242,7 +245,7 @@ function priorityScore(article) {
 const primary = $input.first().json.articles || [];
 let filtered = primary.filter(isValid)
   .filter(a => !postedURLs.includes(a.url))
-  .filter(a => topicScore(a) > 0)
+  .filter(a => testMode || topicScore(a) > 0)
   .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));
 
 // Prefer mix: up to 6 politics + 6 celebrities, then fill to 10
@@ -256,7 +259,6 @@ for (const a of filtered) {
 }
 mixed = mixed.slice(0, 10);
 
-const testMode = staticData.singleSlotTest === true;
 if (mixed.length === 0) {
   const pool = primary.filter(isValid).filter(a => !postedURLs.includes(a.url));
   const relaxed = testMode
@@ -269,7 +271,7 @@ const output = mixed.map(a => ({
   title: a.title,
   description: a.description,
   url: a.url,
-  urlToImage: a.urlToImage,
+  urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,
   source: { name: a.source?.name || 'Unknown' },
   isRepost: false,
 }));
@@ -284,15 +286,18 @@ return [{
 """
 
 FILL_REMAINING_SLOTS = r"""const staticData = $getWorkflowStaticData('global');
+const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
 const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
 
 function getDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 function isValid(article) {
-  if (!article.title || !article.description || !article.urlToImage) return false;
+  if (!article.title || !article.description) return false;
+  if (!testMode && !article.urlToImage) return false;
   if (article.title === '[Removed]' || article.description === '[Removed]') return false;
   if (NOISE.some(n => getDomain(article.url || '').includes(n))) return false;
   return true;
@@ -320,7 +325,7 @@ if (needed > 0) {
       title: a.title,
       description: a.description,
       url: a.url,
-      urlToImage: a.urlToImage,
+      urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,
       source: { name: a.source?.name || 'Unknown' },
       isRepost: false,
     });
@@ -342,6 +347,10 @@ if (articles.length < 10) {
   }
 }
 
+if (articles.length === 0) {
+  throw new Error('No articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or run flush-cache.');
+}
+
 return articles.slice(0, 10).map((a, idx) => ({
   json: { ...a, articleIndex: idx + 1 }
 }));
@@ -350,6 +359,9 @@ return articles.slice(0, 10).map((a, idx) => ({
 MERGE_SCHEDULE_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
 let items = $input.all().map(i => i.json);
+if (items.length === 0) {
+  throw new Error('No articles to post — NewsAPI returned nothing usable or all URLs were already posted. Run flush-cache or check NEWSAPI_KEY quota.');
+}
 if (staticData.singleSlotTest) {
   items = items.slice(0, 1);
   staticData.singleSlotTest = false;
@@ -370,13 +382,17 @@ return items.map((article, idx) => {
 """
 
 PREPARE_SLOT_WAIT = r"""const staticData = $getWorkflowStaticData('global');
+const item = $input.first().json;
+if (staticData.forcePostTest) {
+  staticData.forcePostTest = false;
+  return [{ json: { ...item, waitMs: 0, halted: false } }];
+}
 if (staticData.productionHalted) {
-  return [{ json: { ...$input.first().json, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];
+  return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];
 }
 if (staticData.circuitBreakerHalted) {
-  return [{ json: { ...$input.first().json, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
+  return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
 }
-const item = $input.first().json;
 const waitMs = Math.max(0, item.epochMs - Date.now());
 return [{ json: { ...item, waitMs, halted: false } }];
 """
@@ -408,6 +424,9 @@ staticData.lastApiGateFailures = failures;
 if (!allApisHealthy) {
   staticData.productionHalted = true;
   staticData.circuitBreakerHalted = true;
+} else {
+  staticData.productionHalted = false;
+  staticData.circuitBreakerHalted = false;
 }
 return [{
   json: {
@@ -974,6 +993,7 @@ staticData.todaySchedule = [{
   scheduledEt: 'now',
 }];
 staticData.singleSlotTest = true;
+staticData.forcePostTest = true;
 staticData.circuitBreakerHalted = false;
 staticData.productionHalted = false;
 staticData.apisHealthy = null;
@@ -1330,7 +1350,7 @@ N["fetchFallbackNews"] = add_node(node(
 ))
 N["fillRemainingSlots"] = add_node(node("fillRemainingSlots", "n8n-nodes-base.code", [X(9), Y0], {"jsCode": FILL_REMAINING_SLOTS}, typeVersion=2))
 N["passthroughNoFallback"] = add_node(node("passthroughNoFallback", "n8n-nodes-base.code", [X(8), Y0 + 100], {
-    "jsCode": "return $('filterArticles').first().json.articles.map((a,i)=>({json:{...a,articleIndex:i+1}}));"
+    "jsCode": "const arts = $('filterArticles').first().json.articles || [];\nif (arts.length === 0) throw new Error('filterArticles returned 0 articles');\nreturn arts.map((a,i)=>({json:{...a,articleIndex:i+1}}));"
 }, typeVersion=2))
 N["mergeScheduleWithArticles"] = add_node(node("mergeScheduleWithArticles", "n8n-nodes-base.code", [X(10), Y1], {"jsCode": MERGE_SCHEDULE_ARTICLES}, typeVersion=2))
 N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10), Y1 + 80], {"jsCode": LOG_MERGE_STATS}, typeVersion=2))
@@ -1841,7 +1861,7 @@ wire("productionGateMeta", "evaluateProductionApis")
 wire("evaluateProductionApis", "productionGatePass")
 wire("productionGatePass", "prepareDailyRunEmail", 0)
 wire("prepareDailyRunEmail", "emailDailyRunStarted")
-wire("emailDailyRunStarted", "prepareCategory")
+wire("productionGatePass", "prepareCategory", 0)
 wire("productionGatePass", "haltProduction", 1)
 wire("haltProduction", "prepareHaltEmail")
 wire("prepareHaltEmail", "emailProductionHalted")

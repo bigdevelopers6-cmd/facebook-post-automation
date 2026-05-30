@@ -17,9 +17,32 @@ n8n_login() {
 }
 
 fetch_latest_execution_id() {
+  local since_epoch="${1:-0}"
   curl -s -b /tmp/n8n-cookies.txt \
-    "http://localhost:5678/rest/executions?limit=1&workflowId=$WF_ID" | \
-    python3 -c "import sys,json; print(json.load(sys.stdin)['data']['results'][0]['id'])"
+    "http://localhost:5678/rest/executions?limit=8&workflowId=$WF_ID" | \
+    python3 -c "
+import sys, json
+from datetime import datetime, timezone
+since = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+data = json.load(sys.stdin).get('data', {}).get('results', [])
+picked = None
+for e in data:
+    if e.get('mode') not in ('webhook', 'manual', 'trigger'):
+        continue
+    started = e.get('startedAt') or ''
+    try:
+        ts = datetime.fromisoformat(started.replace('Z', '+00:00')).timestamp()
+    except Exception:
+        ts = 0
+    if since and ts < since - 10:
+        continue
+    picked = e['id']
+    break
+if picked is None and data:
+    picked = data[0]['id']
+if picked:
+    print(picked)
+" "$since_epoch"
 }
 
 fetch_execution_json() {
@@ -52,6 +75,7 @@ echo ""
 
 n8n_login
 
+TRIGGER_EPOCH=$(date +%s)
 echo "[>>] IN PROGRESS  Trigger webhook..."
 RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" http://localhost:5678/webhook/trigger-post)
 HTTP_CODE=$(echo "$RESPONSE" | grep HTTP_CODE | cut -d: -f2)
@@ -75,7 +99,7 @@ while true; do
   ELAPSED=$((NOW - START))
 
   if [ -z "$EXEC_ID" ]; then
-    EXEC_ID=$(fetch_latest_execution_id 2>/dev/null || true)
+    EXEC_ID=$(fetch_latest_execution_id "$TRIGGER_EPOCH" 2>/dev/null || true)
   fi
 
   if [ -n "$EXEC_ID" ]; then
@@ -101,6 +125,9 @@ except Exception:
 
   if [ "$STATUS" = "success" ] || [ "$STATUS" = "error" ] || [ "$STATUS" = "crashed" ]; then
     echo ""
+    if [ "$STATUS" = "success" ] && [ "$ELAPSED" -lt 8 ]; then
+      echo "[!!] WARNING      Finished in ${ELAPSED}s — likely no post (empty articles or skipped). Check diagnose output below."
+    fi
     if [ "$STATUS" = "success" ]; then
       echo "[OK]  DONE         Workflow finished (success)."
     else
