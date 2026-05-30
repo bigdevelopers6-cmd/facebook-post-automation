@@ -64,6 +64,16 @@ Then open `http://YOUR_PUBLIC_IP:5678`, import `workflow/facebook-us-news-automa
 - **6:45 AM ET** — Daily scheduler computes 10 post times (7:00 AM – 9:45 PM ET windows)
 - **11:00 PM ET** — Daily summary report email + file
 
+**Manual `run-now.sh` ≠ daily auto.** The webhook test posts **one** article immediately (MVP path). Auto posting needs the workflow **Active** in n8n, n8n running 24/7, and the **6:45 AM ET** schedule trigger; it then loops **10 slots** with real waits between times.
+
+Verify on the server:
+
+```bash
+bash scripts/check-auto-schedule.sh
+```
+
+Simulate a full day without waiting until morning: n8n → **Manual Trigger** → `setAutoCommand` → `command` = `run-now` (10 posts, 5 minutes apart).
+
 ## /auto Commands
 
 ```
