@@ -11,13 +11,13 @@ services:
     environment:
       - TZ=America/New_York
       - GENERIC_TIMEZONE=America/New_York
-      - N8N_HOST=localhost
+      - N8N_HOST=REPLACE_WITH_PUBLIC_IP
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://localhost:5678/
-      - N8N_ALERT_FROM=alerts@yourdomain.com
-      - N8N_ALERT_TO=owner@yourdomain.com
-      - FB_PAGE_ID=YOUR_PAGE_ID_HERE
+      - WEBHOOK_URL=http://REPLACE_WITH_PUBLIC_IP:5678/
+      - N8N_ALERT_FROM=bigdevelopers6@gmail.com
+      - N8N_ALERT_TO=talhazahoor786@gmail.com
+      - FB_PAGE_ID=1191676374021102
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
     volumes:
