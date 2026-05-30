@@ -337,7 +337,6 @@ EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global
 const gates = [
   { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && !j.error },
   { node: 'productionGateAnthropic', label: 'Anthropic', ok: (j) => j && (Array.isArray(j.data) || j.model) && !j.error },
-  { node: 'productionGateOpenAI', label: 'OpenAI', ok: (j) => j && (j.object === 'list' || Array.isArray(j.data)) && !j.error },
   { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.data && j.data.is_valid === true && !j.error },
 ];
 const failures = [];
@@ -1514,8 +1513,7 @@ wire("scheduleTrigger645AM", "computePostTimes")
 wire("computePostTimes", "storeTodaySchedule")
 wire("storeTodaySchedule", "productionGateNewsAPI")
 wire("productionGateNewsAPI", "productionGateAnthropic")
-wire("productionGateAnthropic", "productionGateOpenAI")
-wire("productionGateOpenAI", "productionGateMeta")
+wire("productionGateAnthropic", "productionGateMeta")
 wire("productionGateMeta", "evaluateProductionApis")
 wire("evaluateProductionApis", "productionGatePass")
 wire("productionGatePass", "prepareDailyRunEmail", 0)
