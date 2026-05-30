@@ -44,6 +44,41 @@ def sticky(text, position, width=400, height=200):
 def conn(from_node, to_node, output_index=0, input_index=0):
     return {"node": to_node, "type": "main", "index": input_index}
 
+# --- Caption / review prompts (used by LLM fallback code nodes) ---
+CAPTION_SYSTEM = (
+    "You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. "
+    "Your audience is US adults 25–45 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. "
+    "Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: "
+    "(1) open with a strong hook tied to US political or celebrity culture, "
+    "(2) summarize the story in 1–2 plain conversational sentences, "
+    "(3) end with a thought-provoking question inviting Americans to comment, "
+    "(4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), "
+    "(5) include exactly 1–2 emojis placed naturally in the caption (not more than two; match the story mood). "
+    "Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. "
+    "Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text."
+)
+
+PRE_PUBLISH_SYSTEM = (
+    "You are a strict Facebook page compliance officer. Analyze the caption provided and return ONLY a JSON object "
+    "with this exact schema: { \"approved\": true/false, \"risk_level\": \"low\"/\"medium\"/\"high\", \"flags\": [], "
+    "\"rewrite_needed\": true/false, \"reason\": \"\" }. Reject (approved: false) if the caption: contains political "
+    "candidate endorsements, makes unverified medical claims, includes hate speech or discriminatory language, "
+    "mentions violence approvingly, contains profanity, reveals it was AI-generated, uses prohibited words "
+    "('crucial','delve','groundbreaking','game-changer'), or could get the page flagged under Meta Community Standards. "
+    "Set risk_level to 'high' if any flag is critical. Output only valid JSON, no markdown, no explanation."
+)
+
+# NewsAPI rejects requests without User-Agent (error code userAgentMissing).
+NEWSAPI_HEADERS = {
+    "sendHeaders": True,
+    "headerParameters": {
+        "parameters": [
+            {"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"},
+            {"name": "User-Agent", "value": "FacebookUSNewsBot/1.0 (n8n; contact=bigdevelopers6@gmail.com)"},
+        ]
+    },
+}
+
 def smtp_email(name, position, subject_expr, body_expr, notes=None):
     """All notification emails use credential SMTP_NOTIFICATIONS."""
     params = {
@@ -335,8 +370,8 @@ return [{ json: { ...item, waitMs, halted: false } }];
 
 EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global');
 const gates = [
-  { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && !j.error },
-  { node: 'productionGateAnthropic', label: 'Anthropic', ok: (j) => j && (Array.isArray(j.data) || j.model) && !j.error },
+  { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },
+  { node: 'productionGateLLM', label: 'CaptionLLM', ok: (j) => j && j.llmGateOk === true },
   { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.data && j.data.is_valid === true && !j.error },
 ];
 const failures = [];
@@ -456,21 +491,248 @@ staticData.errorLog.push({
 return [{ json: { skipped: true, reason: 'PUBLISH_BLOCKED_MISSING_REVIEW', url: item.url } }];
 """
 
-EXTRACT_CAPTION = r"""const response = $input.first().json;
-const caption = response.content?.[0]?.text || '';
-return [{ json: { ...$('prepareSlotWait').first().json, caption, rewriteAttempt: 0 } }];
+LLM_HTTP_HELPERS = r"""
+const https = require('https');
+
+function httpJson(url, options) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+        catch { resolve({ status: res.statusCode, body: { raw: data } }); }
+      });
+    });
+    req.on('error', reject);
+    const body = options.body;
+    if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
+    req.end();
+  });
+}
+
+async function callAnthropic(system, user, maxTokens) {
+  const key = $env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false, provider: 'anthropic', error: 'ANTHROPIC_API_KEY not set' };
+  const r = await httpJson('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content: user }],
+    },
+  });
+  const text = r.body?.content?.[0]?.text;
+  if (r.status === 200 && text) return { ok: true, provider: 'anthropic', text };
+  return { ok: false, provider: 'anthropic', error: JSON.stringify(r.body).slice(0, 300) };
+}
+
+async function callGroq(system, user, maxTokens) {
+  const key = $env.GROQ_API_KEY;
+  const model = ($env.GROQ_MODEL || 'llama-3.1-8b-instant').trim();
+  if (!key) return { ok: false, provider: 'groq', error: 'GROQ_API_KEY not set' };
+  const r = await httpJson('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + key,
+      'Content-Type': 'application/json',
+    },
+    body: {
+      model,
+      max_tokens: maxTokens,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    },
+  });
+  const text = r.body?.choices?.[0]?.message?.content;
+  if (r.status === 200 && text) return { ok: true, provider: 'groq', text };
+  return { ok: false, provider: 'groq', error: JSON.stringify(r.body).slice(0, 300) };
+}
+
+async function callGemini(system, user, maxTokens) {
+  const key = $env.GEMINI_API_KEY;
+  const model = (($env.GEMINI_MODEL || 'gemini-1.5-flash').split(',')[0] || 'gemini-1.5-flash').trim();
+  if (!key) return { ok: false, provider: 'gemini', error: 'GEMINI_API_KEY not set' };
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;
+  const r = await httpJson(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: { maxOutputTokens: maxTokens },
+    },
+  });
+  const text = r.body?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (r.status === 200 && text) return { ok: true, provider: 'gemini', text };
+  return { ok: false, provider: 'gemini', error: JSON.stringify(r.body).slice(0, 300) };
+}
+
+async function llmWithFallback(system, user, maxTokens) {
+  const attempts = [];
+  for (const fn of [callAnthropic, callGroq, callGemini]) {
+    try {
+      const r = await fn(system, user, maxTokens);
+      attempts.push(r);
+      if (r.ok) return { ok: true, text: r.text, provider: r.provider, attempts };
+    } catch (e) {
+      attempts.push({ ok: false, provider: fn.name, error: e.message });
+    }
+  }
+  return { ok: false, attempts };
+}
+
+function parseReviewJson(raw) {
+  try {
+    return JSON.parse(String(raw).replace(/```json|```/g, '').trim());
+  } catch {
+    return { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };
+  }
+}
 """
 
-PARSE_PRE_PUBLISH = r"""const raw = $input.first().json.content?.[0]?.text || '{}';
-let review;
-try {
-  review = JSON.parse(raw.replace(/```json|```/g, '').trim());
-} catch {
-  review = { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };
-}
-const prev = $('extractCaption').first()?.json || $('rewriteCaptionExtract').first()?.json || {};
-return [{ json: { ...prev, ...$('prepareSlotWait').first().json, review, caption: prev.caption || $input.first().json.caption } }];
+GENERATE_CAPTION_WITH_FALLBACK = (
+    LLM_HTTP_HELPERS
+    + f"""
+const CAPTION_SYSTEM = {json.dumps(CAPTION_SYSTEM)};
+const item = $input.first().json;
+const userPrompt = 'Write a Facebook caption for this US politics/celebrity story:\\nTopic: '
+  + (item._topic || 'news') + '\\nTitle: ' + item.title + '\\nDescription: ' + item.description
+  + '\\nSource: ' + (item.source?.name || 'Unknown');
+
+const result = await llmWithFallback(CAPTION_SYSTEM, userPrompt, 350);
+const staticData = $getWorkflowStaticData('global');
+
+if (!result.ok) {{
+  staticData.productionHalted = true;
+  staticData.circuitBreakerHalted = true;
+  staticData.productionHaltReason = 'ALL_LLM_CAPTION_PROVIDERS_FAILED';
+  return [{{
+    json: {{
+      ...item,
+      captionGenerated: false,
+      haltReason: 'ALL_LLM_CAPTION_PROVIDERS_FAILED',
+      failureSummary: 'Claude, Groq, and Gemini all failed for caption generation. Stop the server (port 5678).',
+      failures: result.attempts,
+      stopServerRecommended: true,
+    }},
+  }}];
+}}
+
+return [{{
+  json: {{
+    ...item,
+    caption: result.text.trim(),
+    captionProvider: result.provider,
+    captionGenerated: true,
+    rewriteAttempt: item.rewriteAttempt || 0,
+    llmAttempts: result.attempts,
+  }},
+}}];
 """
+)
+
+REWRITE_CAPTION_WITH_FALLBACK = (
+    LLM_HTTP_HELPERS
+    + f"""
+const CAPTION_SYSTEM = {json.dumps(CAPTION_SYSTEM)};
+const item = $input.first().json;
+const userPrompt = 'Rewrite this Facebook caption fixing these issues: ' + JSON.stringify(item.review?.flags || [])
+  + '. Original caption: ' + item.caption + '. Article title: ' + item.title;
+
+const result = await llmWithFallback(CAPTION_SYSTEM, userPrompt, 350);
+const staticData = $getWorkflowStaticData('global');
+
+if (!result.ok) {{
+  staticData.productionHalted = true;
+  staticData.productionHaltReason = 'ALL_LLM_CAPTION_PROVIDERS_FAILED';
+  return [{{
+    json: {{
+      ...item,
+      captionGenerated: false,
+      haltReason: 'ALL_LLM_CAPTION_PROVIDERS_FAILED',
+      failureSummary: 'All LLM providers failed during caption rewrite.',
+      failures: result.attempts,
+      stopServerRecommended: true,
+    }},
+  }}];
+}}
+
+return [{{
+  json: {{
+    ...item,
+    caption: result.text.trim(),
+    captionProvider: result.provider,
+    captionGenerated: true,
+  }},
+}}];
+"""
+)
+
+PRE_PUBLISH_REVIEW_WITH_FALLBACK = (
+    LLM_HTTP_HELPERS
+    + f"""
+const REVIEW_SYSTEM = {json.dumps(PRE_PUBLISH_SYSTEM)};
+const item = $input.first().json;
+const result = await llmWithFallback(REVIEW_SYSTEM, 'Review this caption: ' + item.caption, 200);
+
+if (!result.ok) {{
+  const staticData = $getWorkflowStaticData('global');
+  staticData.productionHalted = true;
+  staticData.productionHaltReason = 'ALL_LLM_REVIEW_PROVIDERS_FAILED';
+  return [{{
+    json: {{
+      ...item,
+      captionGenerated: false,
+      haltReason: 'ALL_LLM_REVIEW_PROVIDERS_FAILED',
+      failureSummary: 'Claude, Groq, and Gemini all failed for compliance review.',
+      failures: result.attempts,
+      stopServerRecommended: true,
+    }},
+  }}];
+}}
+
+const review = parseReviewJson(result.text);
+return [{{
+  json: {{
+    ...item,
+    review,
+    reviewProvider: result.provider,
+  }},
+}}];
+"""
+)
+
+PRODUCTION_GATE_LLM = (
+    LLM_HTTP_HELPERS
+    + r"""
+const probes = [];
+for (const fn of [callAnthropic, callGroq, callGemini]) {
+  try {
+    const r = await fn('Reply with exactly: OK', 'Health check', 16);
+    probes.push({ provider: r.provider || fn.name, ok: !!r.ok, error: r.error });
+  } catch (e) {
+    probes.push({ provider: fn.name, ok: false, error: e.message });
+  }
+}
+const llmGateOk = probes.some((p) => p.ok);
+return [{ json: { llmGateOk, llmProviders: probes, status: llmGateOk ? 'ok' : 'error' } }];
+"""
+)
 
 INCREMENT_REWRITE = r"""const item = $input.first().json;
 const attempt = (item.rewriteAttempt || 0) + 1;
@@ -729,11 +991,6 @@ const articles = [
 return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
 """
 
-REWRITE_EXTRACT = r"""const response = $input.first().json;
-const caption = response.content?.[0]?.text || '';
-const prev = $('incrementRewriteAttempt').first().json;
-return [{ json: { ...prev, caption } }];
-"""
 
 HEALTH_AGGREGATE = r"""const results = $input.all().map(i => i.json);
 return [{ json: { command: 'health-check', results } }];
@@ -906,20 +1163,14 @@ N["storeTodaySchedule"] = add_node(node("storeTodaySchedule", "n8n-nodes-base.co
 # === PRODUCTION COST GUARD (all APIs must work before spending) ===
 N["productionGateNewsAPI"] = add_node(node(
     "productionGateNewsAPI", "n8n-nodes-base.httpRequest", [X(3), Y0],
-    {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]}},
+    {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1", **NEWSAPI_HEADERS},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueRegularOutput",
 ))
-N["productionGateAnthropic"] = add_node(node(
-    "productionGateAnthropic", "n8n-nodes-base.httpRequest", [X(4), Y0 - 80],
-    {"method": "GET", "url": "https://api.anthropic.com/v1/models",
-     "sendHeaders": True, "headerParameters": {"parameters": [
-         {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
-         {"name": "anthropic-version", "value": "2023-06-01"},
-     ]}},
-    typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
-    onError="continueRegularOutput",
+N["productionGateLLM"] = add_node(node(
+    "productionGateLLM", "n8n-nodes-base.code", [X(4), Y0 - 80],
+    {"jsCode": PRODUCTION_GATE_LLM},
+    typeVersion=2,
 ))
 N["productionGateOpenAI"] = add_node(node(
     "productionGateOpenAI", "n8n-nodes-base.httpRequest", [X(5), Y0 - 80],
@@ -973,8 +1224,7 @@ N["fetchPoliticsNews"] = add_node(node(
             {"name": "sortBy", "value": "publishedAt"},
             {"name": "pageSize", "value": "25"},
         ]},
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
+        **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -991,8 +1241,7 @@ N["fetchCelebritiesNews"] = add_node(node(
             {"name": "category", "value": "entertainment"},
             {"name": "pageSize", "value": "25"},
         ]},
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
+        **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1021,8 +1270,7 @@ N["fetchFallbackNews"] = add_node(node(
             {"name": "sortBy", "value": "publishedAt"},
             {"name": "pageSize", "value": "20"},
         ]},
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
+        **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1113,73 +1361,35 @@ N["emailImageFallbackUsed"] = add_node(smtp_email(
 ))
 
 # === CONTENT GENERATOR ===
-CAPTION_SYSTEM = (
-    "You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. "
-    "Your audience is US adults 25–45 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. "
-    "Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: "
-    "(1) open with a strong hook tied to US political or celebrity culture, "
-    "(2) summarize the story in 1–2 plain conversational sentences, "
-    "(3) end with a thought-provoking question inviting Americans to comment, "
-    "(4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), "
-    "(5) include exactly 1–2 emojis placed naturally in the caption (not more than two; match the story mood). "
-    "Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. "
-    "Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text."
-)
-
 IMAGE_GEN_PROMPT_SUFFIX = (
     ". Photorealistic candid US news photo, natural unstaged lighting, cohesive brand colors: warm yellow highlights, red accents, deep green tones. "
     "Authentic press-photo feel, NOT illustration, NO text, NO logos, NO watermarks, NO emoji characters in the image."
 )
 
-N["generateCaption"] = add_node(node(
-    "generateCaption", "n8n-nodes-base.httpRequest", [X(7), Y2],
-    {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
-            {"name": "anthropic-version", "value": "2023-06-01"},
-            {"name": "content-type", "value": "application/json"},
-        ]},
-        "sendBody": True,
-        "specifyBody": "json",
-        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 350, system: "' + CAPTION_SYSTEM.replace('"', '\\"') + '", messages: [{ role: "user", content: "Write a Facebook caption for this US politics/celebrity story:\\nTopic: " + ($json._topic || "news") + "\\nTitle: " + $json.title + "\\nDescription: " + $json.description + "\\nSource: " + $json.source.name }] }) }}',
-    },
-    typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+N["generateCaptionWithFallback"] = add_node(node(
+    "generateCaptionWithFallback", "n8n-nodes-base.code", [X(7), Y2],
+    {"jsCode": GENERATE_CAPTION_WITH_FALLBACK},
+    typeVersion=2,
 ))
-N["extractCaption"] = add_node(node("extractCaption", "n8n-nodes-base.code", [X(8), Y2], {"jsCode": EXTRACT_CAPTION}, typeVersion=2))
-
-PRE_PUBLISH_SYSTEM = (
-    "You are a strict Facebook page compliance officer. Analyze the caption provided and return ONLY a JSON object "
-    "with this exact schema: { 'approved': true/false, 'risk_level': 'low'/'medium'/'high', 'flags': [], "
-    "'rewrite_needed': true/false, 'reason': '' }. Reject (approved: false) if the caption: contains political "
-    "candidate endorsements, makes unverified medical claims, includes hate speech or discriminatory language, "
-    "mentions violence approvingly, contains profanity, reveals it was AI-generated, uses prohibited words "
-    "('crucial','delve','groundbreaking','game-changer'), or could get the page flagged under Meta Community Standards. "
-    "Set risk_level to 'high' if any flag is critical. Output only valid JSON, no markdown, no explanation."
-)
-
-N["prePublishReview"] = add_node(node(
-    "prePublishReview", "n8n-nodes-base.httpRequest", [X(9), Y2],
-    {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
-            {"name": "anthropic-version", "value": "2023-06-01"},
-            {"name": "content-type", "value": "application/json"},
-        ]},
-        "sendBody": True,
-        "specifyBody": "json",
-        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 200, system: "' + PRE_PUBLISH_SYSTEM.replace("'", "\\'").replace('"', '\\"') + '", messages: [{ role: "user", content: "Review this caption: " + $json.caption }] }) }}',
-    },
-    typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+N["checkCaptionGenerated"] = add_node(node(
+    "checkCaptionGenerated", "n8n-nodes-base.if", [X(8), Y2],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "cg1", "leftValue": "={{ $json.captionGenerated }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
 ))
-N["parsePrePublishReview"] = add_node(node("parsePrePublishReview", "n8n-nodes-base.code", [X(10), Y2], {"jsCode": PARSE_PRE_PUBLISH}, typeVersion=2))
+N["checkLlmHalt"] = add_node(node(
+    "checkLlmHalt", "n8n-nodes-base.if", [X(10), Y2],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "lh1", "leftValue": "={{ $json.captionGenerated }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
+))
+N["prePublishReviewWithFallback"] = add_node(node(
+    "prePublishReviewWithFallback", "n8n-nodes-base.code", [X(9), Y2],
+    {"jsCode": PRE_PUBLISH_REVIEW_WITH_FALLBACK},
+    typeVersion=2,
+))
 N["markCaptionReviewPassed"] = add_node(node("markCaptionReviewPassed", "n8n-nodes-base.code", [X(11), Y2 + 60], {"jsCode": MARK_CAPTION_REVIEW_PASSED}, typeVersion=2))
 N["captionReviewReadyGate"] = add_node(node(
     "captionReviewReadyGate", "n8n-nodes-base.if", [X(12), Y2 + 60],
@@ -1206,25 +1416,11 @@ N["checkRewriteAttempts"] = add_node(node(
      "combinator": "and"}},
     typeVersion=2.2,
 ))
-N["rewriteCaption"] = add_node(node(
-    "rewriteCaption", "n8n-nodes-base.httpRequest", [X(13), Y2 + 120],
-    {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": True,
-        "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
-            {"name": "anthropic-version", "value": "2023-06-01"},
-            {"name": "content-type", "value": "application/json"},
-        ]},
-        "sendBody": True,
-        "specifyBody": "json",
-        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 350, system: "' + CAPTION_SYSTEM.replace('"', '\\"') + '", messages: [{ role: "user", content: "Rewrite this Facebook caption fixing these issues: " + JSON.stringify($json.review.flags) + ". Original caption: " + $json.caption + ". Article title: " + $json.title }] }) }}',
-    },
-    typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+N["rewriteCaptionWithFallback"] = add_node(node(
+    "rewriteCaptionWithFallback", "n8n-nodes-base.code", [X(13), Y2 + 120],
+    {"jsCode": REWRITE_CAPTION_WITH_FALLBACK},
+    typeVersion=2,
 ))
-N["rewriteCaptionExtract"] = add_node(node("rewriteCaptionExtract", "n8n-nodes-base.code", [X(14), Y2 + 120], {"jsCode": REWRITE_EXTRACT}, typeVersion=2))
 N["logSkippedCompliance"] = add_node(node("logSkippedCompliance", "n8n-nodes-base.code", [X(14), Y2 + 240], {"jsCode": LOG_SKIPPED}, typeVersion=2))
 N["buildImagePrompt"] = add_node(node("buildImagePrompt", "n8n-nodes-base.code", [X(12), Y2], {"jsCode": BUILD_IMAGE_PROMPT}, typeVersion=2))
 
@@ -1487,8 +1683,7 @@ N["autoResume"] = add_node(node("autoResume", "n8n-nodes-base.code", [X(3) + 260
 # Health check API pings
 N["healthNewsAPI"] = add_node(node(
     "healthNewsAPI", "n8n-nodes-base.httpRequest", [X(4) + 2600, Y0 + 500],
-    {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]}},
+    {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1", **NEWSAPI_HEADERS},
     typeVersion=4.2, onError="continueErrorOutput",
 ))
 N["healthAnthropic"] = add_node(node(
@@ -1518,8 +1713,8 @@ N["healthAggregate"] = add_node(node("healthAggregate", "n8n-nodes-base.code", [
 wire("scheduleTrigger645AM", "computePostTimes")
 wire("computePostTimes", "storeTodaySchedule")
 wire("storeTodaySchedule", "productionGateNewsAPI")
-wire("productionGateNewsAPI", "productionGateAnthropic")
-wire("productionGateAnthropic", "productionGateMeta")
+wire("productionGateNewsAPI", "productionGateLLM")
+wire("productionGateLLM", "productionGateMeta")
 wire("productionGateMeta", "evaluateProductionApis")
 wire("evaluateProductionApis", "productionGatePass")
 wire("productionGatePass", "prepareDailyRunEmail", 0)
@@ -1555,27 +1750,23 @@ wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token expired
 wire("prepareTokenAlertEmail", "emailTokenExpired")
 wire("emailTokenExpired", "skipInvalidToken")
 wire("skipInvalidToken", "loopBack")
-wire("tokenGate", "slotApiGateAnthropic", 1)  # token ok — verify reviewer API before spend
-wire("slotApiGateAnthropic", "evaluateSlotAnthropic")
-wire("evaluateSlotAnthropic", "slotAnthropicPass")
-wire("slotAnthropicPass", "prepareSlotStartEmail", 0)
+wire("tokenGate", "prepareSlotStartEmail", 1)  # token ok — caption LLM fallback handles providers
 wire("prepareSlotStartEmail", "emailSlotPostStarting")
-wire("emailSlotPostStarting", "generateCaption")
-wire("slotAnthropicPass", "haltProduction", 1)
-
-wire("generateCaption", "extractCaption", 0)
-wire("extractCaption", "prePublishReview")
-wire("prePublishReview", "parsePrePublishReview", 0)
-wire("parsePrePublishReview", "reviewGate")
+wire("emailSlotPostStarting", "generateCaptionWithFallback")
+wire("generateCaptionWithFallback", "checkCaptionGenerated")
+wire("checkCaptionGenerated", "prePublishReviewWithFallback", 0)
+wire("checkCaptionGenerated", "haltProduction", 1)
+wire("prePublishReviewWithFallback", "checkLlmHalt")
+wire("checkLlmHalt", "reviewGate", 0)
+wire("checkLlmHalt", "haltProduction", 1)
 wire("reviewGate", "markCaptionReviewPassed", 0)  # approved — mandatory review layer
 wire("reviewGate", "incrementRewriteAttempt", 1)  # rejected
 wire("markCaptionReviewPassed", "captionReviewReadyGate")
 wire("captionReviewReadyGate", "buildImagePrompt", 0)
 wire("incrementRewriteAttempt", "checkRewriteAttempts")
 wire("checkRewriteAttempts", "logSkippedCompliance", 0)  # max retries exceeded
-wire("checkRewriteAttempts", "rewriteCaption", 1)
-wire("rewriteCaption", "rewriteCaptionExtract", 0)
-wire("rewriteCaptionExtract", "prePublishReview")
+wire("checkRewriteAttempts", "rewriteCaptionWithFallback", 1)
+wire("rewriteCaptionWithFallback", "checkCaptionGenerated")
 wire("logSkippedCompliance", "preparePostSkippedEmail")
 wire("captionReviewReadyGate", "logBlockedPublish", 1)
 
