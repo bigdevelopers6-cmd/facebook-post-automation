@@ -8,7 +8,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "2a6c788a-7893-4026-a315-d8c1eb94da1d",
+      "id": "1fc0c1b2-7700-4630-8022-2d4ccf883b5c",
       "name": "SCHEDULER SUB-SYSTEM \u2014 Daily 6:45 AM ET trigger, compute 10 post times",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -23,7 +23,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "121594cf-e03b-4fc2-936f-1287fde84f9b",
+      "id": "a618937d-571b-4f36-89bb-2549b1f67b91",
       "name": "NEWS FETCHER SUB-SYSTEM \u2014 NewsAPI fetch, filter, dedup, fallback",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -38,7 +38,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "3fdb0c6e-902b-4574-bf13-ad367718576c",
+      "id": "cfd5c69c-eaff-4e63-90af-ada18d82cb55",
       "name": "CONTENT GENERATOR SUB-SYSTEM \u2014 Claude caption + OpenAI image",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -53,7 +53,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "dbf3025b-54ce-416f-a037-0f954095a3f6",
+      "id": "78674823-f83b-48bd-8fb0-d1d66ff78b18",
       "name": "SELF-REVIEW AGENT SUB-SYSTEM \u2014 Pre/post publish compliance",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -68,7 +68,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "fa214373-6644-457a-a80f-bffbc1924f1e",
+      "id": "c38547ca-c0e2-46e9-b73e-5acef8fa2c3c",
       "name": "PUBLISHER SUB-SYSTEM \u2014 Facebook Graph API posting",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -83,7 +83,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "aea8ee89-43ee-406f-9bb7-1ab8d37f15bf",
+      "id": "5afe50ab-561e-46e6-bd98-26a8b34260b5",
       "name": "DAILY SUMMARY \u2014 11:00 PM ET report",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -98,7 +98,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "10ae6261-21c1-4e9b-a305-e4151820aa38",
+      "id": "274eb778-995a-4c28-a865-250513fd8de5",
       "name": "/auto COMMANDS \u2014 Manual trigger control panel",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -113,7 +113,7 @@
         "width": 420,
         "height": 140
       },
-      "id": "ca2944d4-bbba-401a-af52-1e0fe485b90e",
+      "id": "336bfcae-d470-45ca-a38c-c6c9e2b8c386",
       "name": "PRODUCTION COST GUARD \u2014 All 4 APIs must pass before any paid calls; halts + alerts to stop server",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -128,7 +128,7 @@
         "width": 420,
         "height": 140
       },
-      "id": "9cc81407-f9cf-4590-ba6b-8c6ed81d19f1",
+      "id": "ab7cade4-af2d-4647-adcd-5e9aa721ebd5",
       "name": "MANDATORY AI REVIEW LAYERS \u2014 No Facebook post without caption review + image review + finalPublishGate",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -143,7 +143,7 @@
         "width": 400,
         "height": 120
       },
-      "id": "5136260b-5a54-4c0c-9f1d-778f8036c6d9",
+      "id": "e32cfa5a-0790-4bc7-9201-70b362b5b407",
       "name": "SMTP NOTIFICATIONS \u2014 All emails via SMTP_NOTIFICATIONS credential; per-post + alerts + pre-shutdown",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -164,7 +164,7 @@
         },
         "timezone": "America/New_York"
       },
-      "id": "92d5cc2f-c069-4e48-841d-7739ec53f271",
+      "id": "a18ef66a-654e-4760-8e35-d4c99f8433c7",
       "name": "scheduleTrigger645AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -177,7 +177,7 @@
       "parameters": {
         "jsCode": "// Scheduler: compute 10 randomized ET posting times\nconst { DateTime } = require('luxon');\nconst TZ = 'America/New_York';\n\nconst windows = [\n  { label: 'morning_rush', start: 7 * 60, end: 8 * 60 + 45 },\n  { label: 'mid_morning', start: 9 * 60, end: 10 * 60 + 45 },\n  { label: 'late_morning', start: 11 * 60, end: 12 * 60 + 45 },\n  { label: 'lunch', start: 13 * 60, end: 14 * 60 + 45 },\n  { label: 'afternoon', start: 15 * 60, end: 16 * 60 + 45 },\n  { label: 'evening_commute', start: 17 * 60, end: 18 * 60 + 45 },\n  { label: 'prime_time', start: 19 * 60, end: 20 * 60 + 45 },\n  { label: 'late_evening', start: 21 * 60, end: 21 * 60 + 45 },\n];\n\nfunction randomMinuteInWindow(w) {\n  return w.start + Math.floor(Math.random() * (w.end - w.start + 1));\n}\n\nfunction applyJitter(minutes) {\n  return minutes + (Math.floor(Math.random() * 25) - 12);\n}\n\nfunction minutesToEpochMs(minutesFromMidnight, day) {\n  const hours = Math.floor(minutesFromMidnight / 60);\n  const mins = minutesFromMidnight % 60;\n  return day.set({ hour: hours, minute: mins, second: 0, millisecond: 0 }).toUTC().toMillis();\n}\n\nfunction generateSchedule() {\n  const today = DateTime.now().setZone(TZ).startOf('day');\n  const times = [];\n\n  for (const w of windows) {\n    const winIdx = windows.indexOf(w);\n    const label = w.label;\n    times.push({\n      minutes: applyJitter(randomMinuteInWindow(w)),\n      windowLabel: label,\n      windowIndex: winIdx,\n    });\n  }\n\n  for (let i = 0; i < 2; i++) {\n    const w = windows[Math.floor(Math.random() * windows.length)];\n    times.push({\n      minutes: applyJitter(randomMinuteInWindow(w)),\n      windowLabel: w.label + '_extra',\n      windowIndex: windows.indexOf(w),\n    });\n  }\n\n  let attempts = 0;\n  while (attempts < 500) {\n    times.sort((a, b) => a.minutes - b.minutes);\n    let valid = true;\n    const gaps = [];\n    for (let i = 1; i < times.length; i++) {\n      const gap = times[i].minutes - times[i - 1].minutes;\n      gaps.push(gap);\n      if (gap < 40 || gap > 90) {\n        valid = false;\n        const idx = Math.floor(Math.random() * times.length);\n        const w = windows[times[idx].windowIndex ?? Math.floor(Math.random() * windows.length)];\n        times[idx].minutes = applyJitter(randomMinuteInWindow(w));\n        times[idx].windowLabel = w.label;\n        break;\n      }\n    }\n    if (valid) {\n      const uniqueGaps = new Set(gaps);\n      if (uniqueGaps.size === gaps.length) break;\n      const idx = Math.floor(Math.random() * (times.length - 1)) + 1;\n      const w = windows[Math.floor(Math.random() * windows.length)];\n      times[idx].minutes = applyJitter(randomMinuteInWindow(w));\n    }\n    attempts++;\n  }\n\n  times.sort((a, b) => a.minutes - b.minutes);\n  return times.map((t, i) => ({\n    slotIndex: i + 1,\n    epochMs: minutesToEpochMs(t.minutes, today),\n    windowLabel: t.windowLabel,\n    scheduledEt: today.plus({ minutes: t.minutes }).toFormat('HH:mm'),\n  }));\n}\n\nconst schedule = generateSchedule();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.todaySchedule = schedule;\nstaticData.consecutiveFailures = staticData.consecutiveFailures || 0;\nstaticData.circuitBreakerHalted = false;\nstaticData.rewriteAttempts = {};\n\nreturn [{ json: { todaySchedule: schedule, slotCount: schedule.length } }];\n"
       },
-      "id": "88ab91b3-2523-4122-acdc-fa9c891010cc",
+      "id": "06dc595e-cb45-49e3-8326-66b2334b67bd",
       "name": "computePostTimes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -190,7 +190,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst schedule = $input.first().json.todaySchedule;\nstaticData.todaySchedule = schedule;\nreturn [{ json: { stored: true, slotCount: schedule.length } }];\n"
       },
-      "id": "d38b78b2-2cb9-4601-a497-4c3fb62972d4",
+      "id": "c9071008-1753-4476-8ff9-4df4dfc99ccb",
       "name": "storeTodaySchedule",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -208,12 +208,12 @@
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "={{ $credentials.NEWSAPI_KEY }}"
+              "value": "={{ $env.NEWSAPI_KEY }}"
             }
           ]
         }
       },
-      "id": "bce28d2e-b957-4418-adb5-637e8b91226e",
+      "id": "c9d334d0-7945-4053-8030-e72014fb0589",
       "name": "productionGateNewsAPI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -221,12 +221,6 @@
         860,
         0
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEWSAPI_KEY",
-          "name": "NEWSAPI_KEY"
-        }
-      },
       "onError": "continueRegularOutput"
     },
     {
@@ -238,7 +232,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -247,7 +241,7 @@
           ]
         }
       },
-      "id": "f3859aab-f38a-48eb-aac1-b881f0714cc7",
+      "id": "5c51ef30-80a1-4c40-bc7d-ca678823bae0",
       "name": "productionGateAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -255,12 +249,6 @@
         1080,
         -80
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueRegularOutput"
     },
     {
@@ -272,12 +260,12 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
             }
           ]
         }
       },
-      "id": "4a40d192-3b4f-4a65-8974-2c4934c7249a",
+      "id": "4efe2619-8a52-4220-ab09-95b9505973f2",
       "name": "productionGateOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -285,12 +273,6 @@
         1300,
         -80
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "OPENAI_API_KEY",
-          "name": "OPENAI_API_KEY"
-        }
-      },
       "onError": "continueRegularOutput"
     },
     {
@@ -302,16 +284,16 @@
           "parameters": [
             {
               "name": "input_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             },
             {
               "name": "access_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             }
           ]
         }
       },
-      "id": "d6e564e2-569a-41a4-9815-709a420daf31",
+      "id": "6a9a95ee-4798-4634-9265-c6e059acb1ef",
       "name": "productionGateMeta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -325,7 +307,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst gates = [\n  { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && !j.error },\n  { node: 'productionGateAnthropic', label: 'Anthropic', ok: (j) => j && (Array.isArray(j.data) || j.model) && !j.error },\n  { node: 'productionGateOpenAI', label: 'OpenAI', ok: (j) => j && (j.object === 'list' || Array.isArray(j.data)) && !j.error },\n  { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.data && j.data.is_valid === true && !j.error },\n];\nconst failures = [];\nfor (const g of gates) {\n  let healthy = false;\n  let detail = 'not_executed';\n  try {\n    if ($(g.node).isExecuted) {\n      const j = $(g.node).first().json;\n      healthy = g.ok(j);\n      detail = healthy ? 'ok' : JSON.stringify(j).slice(0, 300);\n    }\n  } catch (e) {\n    detail = e.message;\n  }\n  if (!healthy) failures.push({ api: g.label, detail });\n}\nconst allApisHealthy = failures.length === 0;\nstaticData.apisHealthy = allApisHealthy;\nstaticData.lastApiGateCheck = new Date().toISOString();\nstaticData.lastApiGateFailures = failures;\nif (!allApisHealthy) {\n  staticData.productionHalted = true;\n  staticData.circuitBreakerHalted = true;\n}\nreturn [{\n  json: {\n    allApisHealthy,\n    failures,\n    failureSummary: failures.map(f => f.api + ': ' + f.detail).join('; '),\n    haltReason: allApisHealthy ? null : 'PRODUCTION_COST_GUARD',\n  }\n}];\n"
       },
-      "id": "7b63fb63-ef21-4e46-ac48-e66379b269a2",
+      "id": "c9265a14-10f2-4b93-995b-7e29fe9c27ef",
       "name": "evaluateProductionApis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -356,7 +338,7 @@
           "combinator": "and"
         }
       },
-      "id": "5008f489-b946-41c2-9e61-37a5bec180d9",
+      "id": "048edf7c-57cc-4954-9955-4343d31c780b",
       "name": "productionGatePass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -369,7 +351,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nstaticData.productionHalted = true;\nstaticData.circuitBreakerHalted = true;\nstaticData.productionHaltAt = new Date().toISOString();\nstaticData.productionHaltReason = item.failureSummary || item.haltReason || 'API_GATE_FAILED';\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: staticData.productionHaltAt,\n  node_name: 'haltProduction',\n  error_code: 'PRODUCTION_COST_GUARD',\n  error_message: staticData.productionHaltReason,\n  article_url: 'n/a',\n});\nreturn [{\n  json: {\n    halted: true,\n    stopServerRecommended: true,\n    message: 'One or more API keys failed. Workflow halted to avoid charges. Run: docker compose down',\n    failures: item.failures || staticData.lastApiGateFailures,\n  }\n}];\n"
       },
-      "id": "e81fb378-d2fd-4b1b-8200-c4b3eb083b0c",
+      "id": "9c321f3c-d2ae-4347-b4f0-08b0f7cca7e4",
       "name": "haltProduction",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -382,7 +364,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst failures = item.failures || staticData.lastApiGateFailures || [];\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm:ss');\nreturn [{\n  json: {\n    ...item,\n    emailSubject: '[US News Bot] STOP SERVER \u2014 Production halted (API / cost guard)',\n    emailBody: `The workflow has been HALTED to prevent further API charges.\\n\\nTime (ET): ${et}\\n\\n=== WHAT HAPPENED ===\\n${item.failureSummary || staticData.productionHaltReason || 'API validation failed'}\\n\\nFailed APIs:\\n${JSON.stringify(failures, null, 2)}\\n\\n=== SHUTDOWN STEPS (do this now) ===\\n1. SSH into your VPS\\n2. cd ~/awraaq_sgid\\n3. ./scripts/stop-server.sh\\n   (same as: docker compose down)\\n\\n=== AFTER FIXING KEYS ===\\n1. docker compose up -d\\n2. n8n \u2192 /auto reset-errors\\n3. /auto health-check (all 4 APIs must pass)\\n4. /auto test-one\\n5. Re-activate workflow\\n\\nNo further post emails will be sent until the server is back and keys are fixed.`,\n  }\n}];\n"
       },
-      "id": "de4f1add-0daa-4663-87e3-581375c11fcc",
+      "id": "90c06eb8-d123-4365-825e-f662bcc00eb7",
       "name": "prepareHaltEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -398,7 +380,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "5971ae1e-62af-45d8-b695-41c135684390",
+      "id": "3d95997d-2b7a-47f7-aa2d-abe3a66f79dd",
       "name": "emailProductionHalted",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -419,7 +401,7 @@
       "parameters": {
         "jsCode": "const { DateTime } = require('luxon');\nconst staticData = $getWorkflowStaticData('global');\nconst schedule = staticData.todaySchedule || [];\nconst times = schedule.map(s => `Slot ${s.slotIndex}: ${s.scheduledEt} ET (${s.windowLabel})`).join('\\n');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm');\nreturn [{\n  json: {\n    emailSubject: `[US News Bot] Daily run started \u2014 ${schedule.length} posts scheduled`,\n    emailBody: `All API keys passed the production gate. News fetching will begin now.\\n\\nDate (ET): ${et}\\n\\nToday's schedule:\\n${times || 'See n8n execution log'}\\n\\nYou will receive a separate email for each post: when creation starts, when published, if skipped, or if any error occurs.`,\n  }\n}];\n"
       },
-      "id": "d6f17126-d502-4061-814a-2e0ebf2cdf45",
+      "id": "87351cc4-80f4-466c-829e-a6b670b79b46",
       "name": "prepareDailyRunEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -435,7 +417,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "f958ff24-55ac-42f3-a5c9-0e53ef641f97",
+      "id": "3420fb48-7d49-4e41-b57c-ecc0cb3e5e0f",
       "name": "emailDailyRunStarted",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -456,7 +438,7 @@
       "parameters": {
         "jsCode": "return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];\n"
       },
-      "id": "70b5aa02-f23a-476d-a557-f3d16bfed0cc",
+      "id": "cb61af17-f2ff-47fa-b801-b4d8152ca9c3",
       "name": "prepareCategory",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -495,12 +477,12 @@
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "={{ $credentials.NEWSAPI_KEY }}"
+              "value": "={{ $env.NEWSAPI_KEY }}"
             }
           ]
         }
       },
-      "id": "8469046d-7634-406c-a37b-df67468f37e6",
+      "id": "dea6fce1-c745-436c-b28b-b1588d3f4060",
       "name": "fetchPoliticsNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -508,12 +490,6 @@
         1080,
         0
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEWSAPI_KEY",
-          "name": "NEWSAPI_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -549,12 +525,12 @@
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "={{ $credentials.NEWSAPI_KEY }}"
+              "value": "={{ $env.NEWSAPI_KEY }}"
             }
           ]
         }
       },
-      "id": "52a46e73-c55c-443f-87c3-3b4ec92367c8",
+      "id": "d293802b-0be7-4c94-82a6-57ba70f73bcd",
       "name": "fetchCelebritiesNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -562,12 +538,6 @@
         1300,
         0
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEWSAPI_KEY",
-          "name": "NEWSAPI_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -577,7 +547,7 @@
       "parameters": {
         "jsCode": "const politics = $('fetchPoliticsNews').first().json.articles || [];\nconst celebrities = $('fetchCelebritiesNews').first().json.articles || [];\nconst articles = [\n  ...politics.map(a => ({ ...a, _topic: 'politics' })),\n  ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),\n];\nreturn [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];\n"
       },
-      "id": "7f17bad8-00cd-408d-a12e-627eac1a61fe",
+      "id": "9968da61-5f5b-4a44-852d-3fab0a5dc2b3",
       "name": "mergeNewsFeeds",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -590,7 +560,7 @@
       "parameters": {
         "jsCode": "return [{ json: { ...$input.first().json, _category: 'politics+celebrities' } }];"
       },
-      "id": "c2bec36e-83f1-441a-9952-64aae146cda2",
+      "id": "0451974f-6ef1-42a3-9ea7-57794d72a53d",
       "name": "tagCategory",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -603,7 +573,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];\n\nconst TOPIC_KEYWORDS = {\n  politics: /politic|election|congress|senate|house|white house|president|governor|vote|campaign|capitol|democrat|republican|legislation|supreme court/i,\n  celebrities: /celebrity|hollywood|actor|actress|singer|star|entertainment|fame|red carpet|grammy|oscar|kardashian|royal|influencer|premiere|pop culture/i,\n};\n\nfunction topicScore(article) {\n  const text = `${article.title || ''} ${article.description || ''}`;\n  let score = 0;\n  if (TOPIC_KEYWORDS.politics.test(text)) score += 2;\n  if (TOPIC_KEYWORDS.celebrities.test(text)) score += 2;\n  if (article._topic === 'politics' && TOPIC_KEYWORDS.politics.test(text)) score += 1;\n  if (article._topic === 'celebrities' && TOPIC_KEYWORDS.celebrities.test(text)) score += 1;\n  return score;\n}\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\n\nfunction isValid(article) {\n  if (!article.title || !article.description || !article.urlToImage) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  const domain = getDomain(article.url || '');\n  if (NOISE.some(n => domain.includes(n))) return false;\n  return true;\n}\n\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nconst primary = $input.first().json.articles || [];\nlet filtered = primary.filter(isValid)\n  .filter(a => !postedURLs.includes(a.url))\n  .filter(a => topicScore(a) > 0)\n  .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));\n\n// Prefer mix: up to 6 politics + 6 celebrities, then fill to 10\nconst politics = filtered.filter(a => TOPIC_KEYWORDS.politics.test(`${a.title} ${a.description}`) || a._topic === 'politics');\nconst celebs = filtered.filter(a => !politics.includes(a));\nlet mixed = [...politics.slice(0, 6), ...celebs.slice(0, 6)];\nconst seen = new Set(mixed.map(a => a.url));\nfor (const a of filtered) {\n  if (mixed.length >= 10) break;\n  if (!seen.has(a.url)) { mixed.push(a); seen.add(a.url); }\n}\nmixed = mixed.slice(0, 10);\n\nconst output = mixed.map(a => ({\n  title: a.title,\n  description: a.description,\n  url: a.url,\n  urlToImage: a.urlToImage,\n  source: { name: a.source?.name || 'Unknown' },\n  isRepost: false,\n}));\n\nreturn [{\n  json: {\n    articles: output,\n    needed: 10 - output.length,\n    category: 'politics+celebrities',\n  }\n}];\n"
       },
-      "id": "e9d0a4a9-a539-468b-a23d-2a701229a982",
+      "id": "f12e26ba-f26f-4fb0-9752-1d914cafac20",
       "name": "filterArticles",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -634,7 +604,7 @@
           "combinator": "and"
         }
       },
-      "id": "5d3f23e6-cdf3-43b5-a932-31a1e378ad1f",
+      "id": "e26bf82b-1b8d-4e5b-9eb2-3f6ca4451b1b",
       "name": "checkNeedsFallback",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -673,12 +643,12 @@
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "={{ $credentials.NEWSAPI_KEY }}"
+              "value": "={{ $env.NEWSAPI_KEY }}"
             }
           ]
         }
       },
-      "id": "e0ce41c6-f29f-46ea-8378-a50f4c3517b9",
+      "id": "2b343251-5477-4e7d-acc4-56a59c058970",
       "name": "fetchFallbackNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -686,12 +656,6 @@
         1960,
         0
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "NEWSAPI_KEY",
-          "name": "NEWSAPI_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -701,7 +665,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\nfunction isValid(article) {\n  if (!article.title || !article.description || !article.urlToImage) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  if (NOISE.some(n => getDomain(article.url || '').includes(n))) return false;\n  return true;\n}\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nlet articles = $('filterArticles').first().json.articles || [];\nconst needed = 10 - articles.length;\n\nif (needed > 0) {\n  const fallback = $input.first().json.articles || [];\n  const existing = new Set(articles.map(a => a.url));\n  const extra = fallback.filter(isValid)\n    .filter(a => !postedURLs.includes(a.url))\n    .filter(a => !existing.has(a.url))\n    .sort((a, b) => priorityScore(b) - priorityScore(a));\n\n  for (const a of extra) {\n    if (articles.length >= 10) break;\n    articles.push({\n      title: a.title,\n      description: a.description,\n      url: a.url,\n      urlToImage: a.urlToImage,\n      source: { name: a.source?.name || 'Unknown' },\n      isRepost: false,\n    });\n    existing.add(a.url);\n  }\n}\n\nif (articles.length < 10) {\n  const allFiltered = [...($('filterArticles').first().json.articles || []),\n    ...($input.first().json.articles || []).filter(isValid).map(a => ({\n      title: a.title, description: a.description, url: a.url,\n      urlToImage: a.urlToImage, source: { name: a.source?.name || 'Unknown' }, isRepost: false,\n    }))];\n  let i = 0;\n  while (articles.length < 10 && allFiltered.length > 0) {\n    const a = allFiltered[i % allFiltered.length];\n    articles.push({ ...a, isRepost: true });\n    i++;\n  }\n}\n\nreturn articles.slice(0, 10).map((a, idx) => ({\n  json: { ...a, articleIndex: idx + 1 }\n}));\n"
       },
-      "id": "9ff862aa-9dec-424e-9bdf-8c44c84e1500",
+      "id": "7f22c727-e62e-407f-998c-cc9282499494",
       "name": "fillRemainingSlots",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -714,7 +678,7 @@
       "parameters": {
         "jsCode": "return $('filterArticles').first().json.articles.map((a,i)=>({json:{...a,articleIndex:i+1}}));"
       },
-      "id": "fd3c7b4d-7692-4a7d-b4f7-452fd6e15409",
+      "id": "9f846fd7-af8f-49a9-a2e3-e9a899726c59",
       "name": "passthroughNoFallback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -727,7 +691,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst schedule = staticData.todaySchedule || [];\nconst items = $input.all().map(i => i.json);\n\nreturn items.map((article, idx) => {\n  const slot = schedule[idx] || schedule[0];\n  return {\n    json: {\n      ...article,\n      slotIndex: slot.slotIndex,\n      epochMs: slot.epochMs,\n      windowLabel: slot.windowLabel,\n      scheduledEt: slot.scheduledEt,\n    }\n  };\n});\n"
       },
-      "id": "1287a080-1bd3-4441-9c3e-562730e3b7c5",
+      "id": "a56e7828-bd86-45b7-acb6-9caa39972938",
       "name": "mergeScheduleWithArticles",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -741,7 +705,7 @@
         "batchSize": 1,
         "options": {}
       },
-      "id": "cc60b23c-ced4-46a2-8e94-cefd16c0c5e0",
+      "id": "57ce52bd-0095-47ed-8bc2-555eb6dcf271",
       "name": "splitInBatches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -754,7 +718,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (staticData.productionHalted) {\n  return [{ json: { ...$input.first().json, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];\n}\nif (staticData.circuitBreakerHalted) {\n  return [{ json: { ...$input.first().json, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];\n}\nconst item = $input.first().json;\nconst waitMs = Math.max(0, item.epochMs - Date.now());\nreturn [{ json: { ...item, waitMs, halted: false } }];\n"
       },
-      "id": "9fe200cf-bd81-4aee-9805-b8c245b7e1e4",
+      "id": "49172c9c-1755-411e-baa8-54f74f7dae31",
       "name": "prepareSlotWait",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -785,7 +749,7 @@
           "combinator": "and"
         }
       },
-      "id": "5b80dc75-6cbf-42eb-b0dc-6c8e6dadb49f",
+      "id": "5938086b-5c38-4f3e-9449-365c5c160ced",
       "name": "checkHalted",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -798,7 +762,7 @@
       "parameters": {
         "jsCode": "const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';\nreturn [{ json: { skipped: true, reason } }];\n"
       },
-      "id": "eadf8a2e-1f8f-427d-b564-54de96a317cc",
+      "id": "31d48134-6d12-4cdf-84fb-d73e07c8f070",
       "name": "skipHalted",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -813,7 +777,7 @@
         "amount": "={{ $json.waitMs }}",
         "unit": "milliseconds"
       },
-      "id": "30608d4d-969f-41a0-856d-d78d6b219c46",
+      "id": "c6fd8a7c-2aeb-4e36-85b7-e9d563607d5c",
       "name": "waitForSlot",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -831,16 +795,16 @@
           "parameters": [
             {
               "name": "input_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             },
             {
               "name": "access_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             }
           ]
         }
       },
-      "id": "f67ea170-03e7-4517-84b5-e1158b2befb1",
+      "id": "7f5a762c-da82-407e-9a39-9ba6a7446d85",
       "name": "checkFBToken",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -854,7 +818,7 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst data = response.data || {};\nconst isValid = data.is_valid === true;\nconst expiresAt = data.expires_at || 0;\nconst now = Math.floor(Date.now() / 1000);\nconst expiresInDays = expiresAt ? (expiresAt - now) / 86400 : 999;\nconst item = $('prepareSlotWait').first().json;\nreturn [{ json: { ...item, tokenValid: isValid, expiresInDays, skipPosting: !isValid || expiresInDays < 7 } }];\n"
       },
-      "id": "7b010196-c751-4a9a-81e2-6136f218cfa1",
+      "id": "de0a79b2-d2eb-4112-b320-68fe19aad9ad",
       "name": "parseFBToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -885,7 +849,7 @@
           "combinator": "and"
         }
       },
-      "id": "fd56851f-286c-4708-8b83-7b6319df47a6",
+      "id": "5d1d113f-d6ee-4750-854d-ef32f2d7ea37",
       "name": "tokenGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -898,7 +862,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'checkFBToken',\n  error_code: 'TOKEN_INVALID',\n  error_message: 'FB token invalid or expires within 7 days',\n  article_url: $input.first().json.url,\n});\nreturn [{ json: { skipped: true, reason: 'TOKEN_INVALID' } }];\n"
       },
-      "id": "fb36cced-0f78-41a4-a977-76b97180cab3",
+      "id": "637d71f7-2bd4-4725-82db-aaf69b72a79c",
       "name": "skipInvalidToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -911,7 +875,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst days = typeof item.expiresInDays === 'number' ? item.expiresInDays.toFixed(1) : 'unknown';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] URGENT \u2014 Facebook token invalid or expiring (${days} days)`,\n    emailBody: `Facebook Page access token check FAILED before posting.\\n\\nToken valid: ${item.tokenValid}\\nExpires in (days): ${days}\\nSlot skipped: ${item.slotIndex}\\nArticle: ${item.title}\\n\\nAction required:\\n1. Regenerate never-expiring System User token (Setup Guide Part F)\\n2. Update FB_PAGE_ACCESS_TOKEN in n8n Credentials\\n3. Run /auto check-token\\n\\nPosting for this slot was skipped. Fix token before next slot.`,\n  }\n}];\n"
       },
-      "id": "2801f071-ca22-431c-9d2c-6beb291cdc61",
+      "id": "4ab7bb53-5d9d-4fb0-8917-25d18e9fd994",
       "name": "prepareTokenAlertEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -927,7 +891,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "aba80198-e52f-4b37-9bfa-4be073977ad0",
+      "id": "8810586f-6af3-4fca-bfc4-e42a4c03a7da",
       "name": "emailTokenExpired",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -948,7 +912,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('HH:mm:ss');\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Creating post \u2014 Slot ${item.slotIndex}/10`,\n    emailBody: `Post creation started for this slot.\\n\\nTime (ET): ${et}\\nSlot: ${item.slotIndex} (${item.windowLabel})\\nScheduled: ${item.scheduledEt} ET\\nTitle: ${item.title}\\nSource: ${item.source?.name}\\n\\nNext steps: AI caption \u2192 compliance review \u2192 image \u2192 Facebook publish.\\nYou will get another email when the post is published or skipped.`,\n  }\n}];\n"
       },
-      "id": "666fd516-d0a2-473f-a5ba-f3900117febe",
+      "id": "a79b5e39-74a8-4e87-bff3-5c53fbe4aafe",
       "name": "prepareSlotStartEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -964,7 +928,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "d985c12b-3aae-45b0-962a-fb12f5982a9f",
+      "id": "8e01e74f-26de-4b05-8df0-6849410caeb8",
       "name": "emailSlotPostStarting",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -985,7 +949,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm:ss');\nconst pageId = $env.FB_PAGE_ID || 'your-page-id';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Published \u2014 Slot ${item.slotIndex}/10`,\n    emailBody: `Post successfully published to Facebook.\\n\\nTime (ET): ${et}\\nSlot: ${item.slotIndex} (${item.windowLabel})\\nFacebook Post ID: ${item.post_id}\\n\\nHeadline: ${item.title}\\nSource: ${item.source?.name}\\nArticle: ${item.url}\\n\\nImage: ${item.imageSource}\\nQuality score: ${item.audit?.quality_score ?? 'n/a'}/10\\nCompliance: ${item.audit?.compliance_status ?? 'n/a'}\\n\\nView Page: https://www.facebook.com/${pageId}`,\n  }\n}];\n"
       },
-      "id": "6274b877-276c-469e-96a1-f9d4abb7275d",
+      "id": "994bfcf7-da81-41ff-9a65-a62dd84d2b9a",
       "name": "preparePostSuccessEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1001,7 +965,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "985cb1b7-128c-4b74-958d-90800fd3b2f4",
+      "id": "9ccea926-ef4c-4b50-aaf7-ef6978d49cf9",
       "name": "emailPostPublished",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1022,7 +986,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst reason = item.reason || item.skipReason || item.publishBlockedReason || 'UNKNOWN';\nconst labels = {\n  SKIPPED_COMPLIANCE: 'AI compliance review failed after max rewrites',\n  PUBLISH_BLOCKED_MISSING_REVIEW: 'Mandatory review layers not satisfied',\n  TOKEN_INVALID: 'Facebook token invalid or expiring within 7 days',\n  PRODUCTION_API_HALT: 'Production halted \u2014 API key failure',\n  CIRCUIT_BREAKER_HALTED: 'Circuit breaker \u2014 too many publish failures',\n  PRODUCTION_API_HALT: 'Production API guard halted workflow',\n};\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] SKIPPED \u2014 Slot ${item.slotIndex || '?'} (${reason})`,\n    emailBody: `This slot was NOT posted to Facebook.\\n\\nReason: ${labels[reason] || reason}\\nSlot: ${item.slotIndex} (${item.windowLabel || ''})\\nTitle: ${item.title || 'n/a'}\\nDetail: ${item.review?.reason || item.failureSummary || ''}\\nTime: ${new Date().toISOString()}`,\n  }\n}];\n"
       },
-      "id": "e2e06659-1678-476f-aa98-92f4c9d9ff9c",
+      "id": "2e0cd472-3981-4cbd-b03e-5bac81a99851",
       "name": "preparePostSkippedEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1038,7 +1002,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "ed8bbce9-c9a0-4a2e-be0b-e8e03c7d6192",
+      "id": "19415271-f7da-4089-a937-8953abba4256",
       "name": "emailPostSkipped",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1059,7 +1023,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst errMsg = item.error?.message || item.error?.description || JSON.stringify(item.error || item);\nconst haltNote = (item.consecutiveFailures || 0) > 4\n  ? '\\n\\nCIRCUIT BREAKER: Remaining slots halted for today. You will receive a separate email.'\n  : '';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Publish FAILED \u2014 Slot ${item.slotIndex || '?'}`,\n    emailBody: `Facebook API rejected or failed this post.\\n\\nSlot: ${item.slotIndex}\\nTitle: ${item.title || 'n/a'}\\nError: ${errMsg}\\nConsecutive failures today: ${item.consecutiveFailures || 0}${haltNote}`,\n  }\n}];\n"
       },
-      "id": "67c140db-8b75-4bee-ac60-1fcdd4dbfb2e",
+      "id": "884c3718-9b2a-47b2-a3e8-593f0de5834b",
       "name": "preparePublishFailEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1075,7 +1039,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "44ecd93b-75da-42e3-92e8-9ba3d8393c90",
+      "id": "a03feec3-14fa-4514-a3c8-324c633b2381",
       "name": "emailPublishFailed",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1096,7 +1060,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    emailSubject: '[US News Bot] Circuit breaker \u2014 posting halted for today',\n    emailBody: `More than 4 consecutive Facebook publish failures.\\n\\nConsecutive failures: ${item.consecutiveFailures}\\n\\nRemaining slots today will be skipped.\\n\\nCheck errorLog in n8n, verify FB token and permissions, then /auto reset-errors after fixing.`,\n  }\n}];\n"
       },
-      "id": "4a2d2940-5e52-48a7-aaa6-af45d43c640d",
+      "id": "3f673a21-7d4d-4baa-b81c-178f9130219b",
       "name": "prepareCircuitBreakerEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1109,7 +1073,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Image fallback \u2014 Slot ${item.slotIndex}`,\n    emailBody: `AI image prompt was rejected by compliance review. Using NewsAPI photo instead (no OpenAI image charge).\\n\\nSlot: ${item.slotIndex}\\nTitle: ${item.title}\\nReason: ${item.imageReview?.reason || 'policy'}\\n\\nPublishing will continue with urlToImage fallback.`,\n  }\n}];\n"
       },
-      "id": "fb1f79bb-a762-44de-8b60-8dcbf6452284",
+      "id": "f41d3707-60d2-4dab-a0cc-bae60eddecb0",
       "name": "prepareImageFallbackEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1125,7 +1089,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "d8f31abe-690f-4eb6-bc14-f7e6011a54cd",
+      "id": "99ba24a3-6b57-4a1c-930b-786f82ad6526",
       "name": "emailImageFallbackUsed",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1151,7 +1115,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -1167,7 +1131,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 350, system: \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\", messages: [{ role: \"user\", content: \"Write a Facebook caption for this US politics/celebrity story:\\nTopic: \" + ($json._topic || \"news\") + \"\\nTitle: \" + $json.title + \"\\nDescription: \" + $json.description + \"\\nSource: \" + $json.source.name }] }) }}"
       },
-      "id": "ab932d7d-f81a-45da-ab2b-22ecd387f02c",
+      "id": "a1666a55-c316-4721-a0e0-a3a01248976e",
       "name": "generateCaption",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1175,12 +1139,6 @@
         1740,
         600
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -1190,7 +1148,7 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst caption = response.content?.[0]?.text || '';\nreturn [{ json: { ...$('prepareSlotWait').first().json, caption, rewriteAttempt: 0 } }];\n"
       },
-      "id": "38619554-be23-4944-9000-869db894f582",
+      "id": "b51d67fe-9fe9-496a-9aa1-b6ffef340c3c",
       "name": "extractCaption",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1208,7 +1166,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -1224,7 +1182,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 200, system: \"You are a strict Facebook page compliance officer. Analyze the caption provided and return ONLY a JSON object with this exact schema: { \\'approved\\': true/false, \\'risk_level\\': \\'low\\'/\\'medium\\'/\\'high\\', \\'flags\\': [], \\'rewrite_needed\\': true/false, \\'reason\\': \\'\\' }. Reject (approved: false) if the caption: contains political candidate endorsements, makes unverified medical claims, includes hate speech or discriminatory language, mentions violence approvingly, contains profanity, reveals it was AI-generated, uses prohibited words (\\'crucial\\',\\'delve\\',\\'groundbreaking\\',\\'game-changer\\'), or could get the page flagged under Meta Community Standards. Set risk_level to \\'high\\' if any flag is critical. Output only valid JSON, no markdown, no explanation.\", messages: [{ role: \"user\", content: \"Review this caption: \" + $json.caption }] }) }}"
       },
-      "id": "a0f3ca9d-d00d-49e0-9d43-4e001e3baa7f",
+      "id": "5a609b38-3c92-4a5e-b69b-9bbaf6416699",
       "name": "prePublishReview",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1232,12 +1190,6 @@
         2180,
         600
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -1247,7 +1199,7 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet review;\ntry {\n  review = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch {\n  review = { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };\n}\nconst prev = $('extractCaption').first()?.json || $('rewriteCaptionExtract').first()?.json || {};\nreturn [{ json: { ...prev, ...$('prepareSlotWait').first().json, review, caption: prev.caption || $input.first().json.caption } }];\n"
       },
-      "id": "6c664117-7c94-4a18-a937-cc114ce89d3b",
+      "id": "405214b9-32a3-4206-a978-bb9597704d36",
       "name": "parsePrePublishReview",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1260,7 +1212,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nif (!item.review || item.review.approved !== true || item.review.risk_level === 'high') {\n  return [{ json: { ...item, aiCaptionApproved: false, publishBlockedReason: 'CAPTION_REVIEW_NOT_APPROVED' } }];\n}\nreturn [{\n  json: {\n    ...item,\n    aiCaptionApproved: true,\n    aiCaptionReviewAt: new Date().toISOString(),\n    prePublishReviewPassed: true,\n  }\n}];\n"
       },
-      "id": "5f4dac94-5586-4e71-ac29-614eed3da95d",
+      "id": "49ba6955-14bb-4296-b88f-ee31a221b424",
       "name": "markCaptionReviewPassed",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1291,7 +1243,7 @@
           "combinator": "and"
         }
       },
-      "id": "1e489cbe-c676-4397-a135-693f4857ad7e",
+      "id": "262df33c-7077-4cb5-9c64-9340900089cb",
       "name": "captionReviewReadyGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1331,7 +1283,7 @@
           "combinator": "and"
         }
       },
-      "id": "359576ee-fb96-49c3-b776-e2ec5f1a1239",
+      "id": "a211658c-5a40-48ce-807b-d2323a336e9e",
       "name": "reviewGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1344,7 +1296,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst attempt = (item.rewriteAttempt || 0) + 1;\nconst staticData = $getWorkflowStaticData('global');\nstaticData.rewriteAttempts[item.url] = attempt;\nreturn [{ json: { ...item, rewriteAttempt: attempt } }];\n"
       },
-      "id": "4a0d8169-2136-46d7-81d7-00dfe38bf0f7",
+      "id": "823d401a-cb31-4021-bb22-e5766795b34e",
       "name": "incrementRewriteAttempt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1375,7 +1327,7 @@
           "combinator": "and"
         }
       },
-      "id": "2bec0ca1-6946-4926-9829-704a41bef795",
+      "id": "89f7161a-20a4-417e-9bee-cea002210719",
       "name": "checkRewriteAttempts",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1393,7 +1345,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -1409,7 +1361,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 350, system: \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\", messages: [{ role: \"user\", content: \"Rewrite this Facebook caption fixing these issues: \" + JSON.stringify($json.review.flags) + \". Original caption: \" + $json.caption + \". Article title: \" + $json.title }] }) }}"
       },
-      "id": "7085a078-16e2-41f7-89e7-3ef619939433",
+      "id": "57386e71-9117-4afc-b3f7-3a10f4db222a",
       "name": "rewriteCaption",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1417,12 +1369,6 @@
         3060,
         720
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -1432,7 +1378,7 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst caption = response.content?.[0]?.text || '';\nconst prev = $('incrementRewriteAttempt').first().json;\nreturn [{ json: { ...prev, caption } }];\n"
       },
-      "id": "ffb9bb1b-629c-4e96-bbc2-5430b5c2a209",
+      "id": "4ae56912-f880-44ae-91ad-66274fbcfc75",
       "name": "rewriteCaptionExtract",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1445,7 +1391,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'reviewGate',\n  error_code: 'SKIPPED_COMPLIANCE',\n  error_message: $input.first().json.review?.reason || 'Compliance rejection after max retries',\n  article_url: $input.first().json.url,\n});\nif (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);\nreturn [{ json: { skipped: true, reason: 'SKIPPED_COMPLIANCE', url: $input.first().json.url } }];\n"
       },
-      "id": "32c0ce7f-3cbd-495c-9b16-4a1b81fdd211",
+      "id": "8d7c6840-2b51-4692-a0cb-7f6f513cc26c",
       "name": "logSkippedCompliance",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1458,7 +1404,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst topic = item._topic || 'news';\nconst imagePrompt = `Photorealistic candid US ${topic} news photograph about: ${item.title}. Natural unstaged moment, real people and environments, soft daylight, shallow depth of field, looks like a professional press photo taken on location \u2014 not AI art, not illustration. Consistent brand color grading on every post: warm golden yellow highlights, rich red accents, and deep green tones in clothing, decor, lighting, or background. Cohesive yellow-red-green palette across the frame. Authentic Facebook news Page aesthetic, relatable and human. NO text, NO logos, NO watermarks, NO signs with words, NO graphic design layout, NO cartoon, NO embedded emoji characters painted in the image.`;\nreturn [{ json: { ...item, imagePrompt } }];\n"
       },
-      "id": "7ef53817-1704-4fa3-bdff-2e1381b4d02c",
+      "id": "946c44cf-26f4-485f-b1b3-9b5067d3a1bc",
       "name": "buildImagePrompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1476,7 +1422,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -1492,7 +1438,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 200, system: \"You are an image compliance officer for a US Facebook news page. You will receive an image generation prompt. Return ONLY JSON: { \\'approved\\': true/false, \\'reason\\': \\'\\' }. Reject if the prompt could produce: graphic violence, nudity, identifiable real people in compromising situations, political propaganda imagery, or anything violating Meta\\'s image policies. Output only valid JSON.\", messages: [{ role: \"user\", content: \"Review this image generation prompt: \" + $json.imagePrompt }] }) }}"
       },
-      "id": "1c322ae3-90aa-493d-a48c-c658373d6d2f",
+      "id": "dc21d07c-5546-4cc1-8989-ab3ee6c4250d",
       "name": "imageReview",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1500,12 +1446,6 @@
         3060,
         600
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -1515,7 +1455,7 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet review;\ntry {\n  review = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch {\n  review = { approved: false, reason: 'Invalid JSON from image reviewer' };\n}\nconst prev = $('buildImagePrompt').first().json;\nreturn [{ json: { ...prev, imageReview: review } }];\n"
       },
-      "id": "e1c668b9-b80f-4872-a75f-91972ae89e67",
+      "id": "705fefa7-776a-43db-b49f-14653f6a199a",
       "name": "parseImageReview",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1546,7 +1486,7 @@
           "combinator": "and"
         }
       },
-      "id": "261065c2-d405-43b5-b66b-1e395375ae99",
+      "id": "455fdc67-dd09-479e-a7eb-0381d5784ff5",
       "name": "imageReviewGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1564,7 +1504,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
             },
             {
               "name": "Content-Type",
@@ -1576,7 +1516,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"gpt-image-1\", quality: \"high\", size: \"1536x1024\", n: 1, prompt: $json.imagePrompt || (\"Photorealistic candid US news photo: \" + $json.title + \". Photorealistic candid US news photo, natural unstaged lighting, cohesive brand colors: warm yellow highlights, red accents, deep green tones. Authentic press-photo feel, NOT illustration, NO text, NO logos, NO watermarks, NO emoji characters in the image.\") }) }}"
       },
-      "id": "1d4afebf-3717-4a4c-8c96-651a3363bd7b",
+      "id": "b82a9bce-41f4-4bd0-bce0-7c09d5cc0224",
       "name": "generateImage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1584,12 +1524,6 @@
         3720,
         600
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "OPENAI_API_KEY",
-          "name": "OPENAI_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -1599,7 +1533,7 @@
       "parameters": {
         "jsCode": "const item = $('buildImagePrompt').first().json;\nconst response = $input.first().json;\nconst aiUrl = response.data?.[0]?.url || '';\nreturn [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageSource: 'openai_generated' } }];\n"
       },
-      "id": "9549e7b4-a8e6-46e4-a69f-8c4f2346e69f",
+      "id": "34514535-805e-41bd-b586-a78606dc93ae",
       "name": "extractImageUrl",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1612,7 +1546,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'imageReviewGate',\n  error_code: 'IMAGE_FALLBACK_USED',\n  error_message: $input.first().json.imageReview?.reason || 'Image prompt rejected',\n  article_url: $input.first().json.url,\n});\nconst item = $input.first().json;\nreturn [{ json: { ...item, useFallbackImage: true, finalImageUrl: item.urlToImage, imageSource: 'newsapi_fallback' } }];\n"
       },
-      "id": "7bf031bf-5d46-42ef-9768-c0b793254c1f",
+      "id": "8a0fd228-b2e6-4fd4-aefb-80764f8e6c4c",
       "name": "applyImageFallback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1625,7 +1559,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst cleared = !!(item.finalImageUrl && (item.imageReview?.approved === true || item.useFallbackImage === true));\nreturn [{\n  json: {\n    ...item,\n    aiImageCleared: cleared,\n    aiImageReviewAt: new Date().toISOString(),\n  }\n}];\n"
       },
-      "id": "070c3a70-82cf-4e39-99bb-b458599559cc",
+      "id": "495e6836-aca3-4fe2-84f8-9581fc3f7940",
       "name": "mergeImagePaths",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1692,7 +1626,7 @@
           "combinator": "and"
         }
       },
-      "id": "93346110-a473-4f9f-be94-3beaf4b8e768",
+      "id": "e8d0ebbc-6395-4fbe-891b-12bb275aec92",
       "name": "finalPublishGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1705,7 +1639,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'finalPublishGate',\n  error_code: 'PUBLISH_BLOCKED_MISSING_REVIEW',\n  error_message: item.publishBlockedReason || 'Mandatory AI review layers not satisfied',\n  article_url: item.url,\n});\nreturn [{ json: { skipped: true, reason: 'PUBLISH_BLOCKED_MISSING_REVIEW', url: item.url } }];\n"
       },
-      "id": "f5adc1cd-201f-4782-bfe7-b93011c20809",
+      "id": "82879d06-452b-4661-b866-3d1e82c67b0d",
       "name": "logBlockedPublish",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1723,7 +1657,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -1732,7 +1666,7 @@
           ]
         }
       },
-      "id": "15865430-6a03-440f-b230-1f7f47a08be3",
+      "id": "9df2e641-a815-4c2a-821b-b6074eecc0a6",
       "name": "slotApiGateAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1740,19 +1674,13 @@
         1740,
         300
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst healthy = (Array.isArray(j.data) || j.model) && !j.error;\nconst staticData = $getWorkflowStaticData('global');\nif (!healthy) {\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'Anthropic API failed mid-slot \u2014 reviewer unavailable';\n}\nconst item = $('parseFBToken').first().json;\nreturn [{ json: { ...item, slotAnthropicHealthy: healthy } }];\n"
       },
-      "id": "0b3d1763-027b-436a-8bf6-b1c9954311c0",
+      "id": "0576decc-926d-4609-b9b5-4cf268d446c8",
       "name": "evaluateSlotAnthropic",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1783,7 +1711,7 @@
           "combinator": "and"
         }
       },
-      "id": "2f643965-c3f9-4815-94ca-f067a8a8e185",
+      "id": "2c3f6385-e5e0-40f7-a9ca-d8a6b2ea9d19",
       "name": "slotAnthropicPass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1801,12 +1729,12 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
             }
           ]
         }
       },
-      "id": "aa34f299-952a-4812-88b3-839971ba21ad",
+      "id": "64451ba3-49d8-48f4-82e2-3810bb08e5ab",
       "name": "slotApiGateOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1814,19 +1742,13 @@
         3500,
         660
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "OPENAI_API_KEY",
-          "name": "OPENAI_API_KEY"
-        }
-      },
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst healthy = (j.object === 'list' || Array.isArray(j.data)) && !j.error;\nconst staticData = $getWorkflowStaticData('global');\nif (!healthy) {\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'OpenAI API failed mid-slot \u2014 image generation unavailable';\n}\nconst item = $('markCaptionReviewPassed').first().json;\nreturn [{ json: { ...item, slotOpenAIHealthy: healthy } }];\n"
       },
-      "id": "15ec4092-4533-4e80-b702-c020aabd4d67",
+      "id": "50390b08-4bed-45cb-b944-7c69ab6a4519",
       "name": "evaluateSlotOpenAI",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1857,7 +1779,7 @@
           "combinator": "and"
         }
       },
-      "id": "bd65f001-a971-4d10-be88-16729cb3a305",
+      "id": "31cb7042-f715-4b89-8240-06976f8b0a11",
       "name": "slotOpenAIPass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1884,12 +1806,12 @@
             },
             {
               "name": "access_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             }
           ]
         }
       },
-      "id": "5d4a8bb8-228c-4581-9c7b-1713a799d448",
+      "id": "1bec83b9-d886-48a2-b162-adf14ef346ee",
       "name": "publishToFacebook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1903,7 +1825,7 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;\nconst postId = response.id || response.post_id || '';\nreturn [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];\n"
       },
-      "id": "b2463edf-a882-4d4b-86de-d089f44ac59d",
+      "id": "0d44b7e4-cc1a-4db9-8f88-a5ae19042e5c",
       "name": "handlePublishSuccess",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1916,7 +1838,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;\nstaticData.errorLog = staticData.errorLog || [];\nlet ctx = {};\ntry { ctx = $('mergeImagePaths').first().json; } catch (e) {}\nconst err = $input.first().json;\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'publishToFacebook',\n  error_code: err.error?.statusCode || 'FB_ERROR',\n  error_message: err.error?.message || JSON.stringify(err),\n  article_url: ctx.url || 'unknown',\n});\nif (staticData.consecutiveFailures > 4) {\n  staticData.circuitBreakerHalted = true;\n}\nif (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);\nreturn [{ json: { ...ctx, ...err, publishSuccess: false, consecutiveFailures: staticData.consecutiveFailures } }];\n"
       },
-      "id": "4d31f49c-aea8-4b11-a99d-9d6925b09308",
+      "id": "259ef207-8b4f-419c-9554-70a856493a80",
       "name": "handlePublishError",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1932,7 +1854,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "bd793a93-81f1-4db8-82c3-b67850e43cd0",
+      "id": "7d56dd08-276b-4dc1-aa07-cac04dc86e12",
       "name": "emailCircuitBreaker",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1971,7 +1893,7 @@
           "combinator": "and"
         }
       },
-      "id": "8b9595c1-7486-450e-a835-e59039adf3ac",
+      "id": "a67dd0e1-a12f-4422-9375-06ef025828fa",
       "name": "checkCircuitAfterError",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1989,7 +1911,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -2005,7 +1927,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 300, system: \"You are a social media audit bot. Given a published Facebook post\\'s data, return ONLY JSON: { \\'post_id\\': \\'\\', \\'timestamp_et\\': \\'\\', \\'category\\': \\'\\', \\'tone\\': \\'\\', \\'compliance_status\\': \\'clean\\'/\\'flagged\\', \\'quality_score\\': 1-10, \\'notes\\': \\'\\' }. Score quality 1\u201310 based on: hook strength, audience relevance, question quality, hashtag relevance. Flag if anything looks risky in retrospect.\", messages: [{ role: \"user\", content: \"Audit this post. Caption: \" + $json.caption + \". Image prompt: \" + $json.imagePrompt + \". Post ID: \" + $json.post_id + \". Timestamp: \" + $json.publishTimestamp }] }) }}"
       },
-      "id": "a0af24cd-5f7d-4120-97c0-4049cc858874",
+      "id": "dc4d0571-0877-4d4c-a5a9-9139459e2073",
       "name": "postPublishAudit",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2013,12 +1935,6 @@
         640,
         1200
       ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "ANTHROPIC_API_KEY",
-          "name": "ANTHROPIC_API_KEY"
-        }
-      },
       "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 3,
@@ -2028,7 +1944,7 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet audit;\ntry {\n  audit = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch {\n  audit = { compliance_status: 'flagged', quality_score: 0, notes: 'Audit parse error' };\n}\nconst prev = $('handlePublishSuccess').first().json;\nreturn [{ json: { ...prev, audit } }];\n"
       },
-      "id": "3cca43ba-d41e-4912-b928-69aace9ef1db",
+      "id": "d056b241-042c-40b9-ae60-b89877de5ed9",
       "name": "parsePostPublishAudit",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2041,7 +1957,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.auditLog = staticData.auditLog || [];\nconst item = $input.first().json;\nstaticData.auditLog.push({\n  ...item.audit,\n  post_id: item.post_id,\n  article_url: item.url,\n  timestamp: item.publishTimestamp,\n  imageSource: item.imageSource,\n});\nif (staticData.auditLog.length > 100) staticData.auditLog = staticData.auditLog.slice(-100);\nstaticData.dailyAuditArchive = staticData.dailyAuditArchive || [];\nstaticData.dailyAuditArchive.push(staticData.auditLog[staticData.auditLog.length - 1]);\nreturn [{ json: item }];\n"
       },
-      "id": "7dde9fa0-a46e-421d-b95d-19395daee7de",
+      "id": "7ac1c0af-346a-498a-a351-184c43772b06",
       "name": "appendAuditLog",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2072,7 +1988,7 @@
           "combinator": "and"
         }
       },
-      "id": "abb9e1fb-abfd-49b8-9c6d-39b2f93bd46e",
+      "id": "b5170427-77bc-4900-b99a-7bb49b101bb0",
       "name": "checkFlaggedAudit",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -2085,7 +2001,7 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] FLAGGED post \u2014 review required (ID ${item.post_id})`,\n    emailBody: `Post-publish AI audit flagged this post.\\n\\nPost ID: ${item.post_id}\\nTitle: ${item.title}\\nQuality score: ${item.audit?.quality_score}\\nNotes: ${item.audit?.notes || ''}\\n\\nReview on Facebook and delete if necessary.`,\n  }\n}];\n"
       },
-      "id": "e2fb1a7e-3d8c-42f4-aa1a-59547c39af4b",
+      "id": "874ab8aa-c50b-4a2a-a041-82aa21e8e10f",
       "name": "prepareFlaggedPostEmail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2101,7 +2017,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "1afc5295-389b-4c74-b824-14e94b7e0358",
+      "id": "c6e7914c-e1f9-43be-bc1d-43e7913174c4",
       "name": "emailFlaggedPost",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -2122,7 +2038,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.postedURLs = staticData.postedURLs || [];\nconst url = $input.first().json.url;\nif (url && !staticData.postedURLs.includes(url)) {\n  staticData.postedURLs.push(url);\n}\nif (staticData.postedURLs.length > 200) {\n  staticData.postedURLs = staticData.postedURLs.slice(-200);\n}\nstaticData.consecutiveFailures = 0;\nreturn [{ json: { updated: true, url } }];\n"
       },
-      "id": "d9cbdb96-6612-419a-b255-de543ca5fef6",
+      "id": "3ecc35b8-9672-4839-a976-09859ff57069",
       "name": "updatePostedURLs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2133,7 +2049,7 @@
     },
     {
       "parameters": {},
-      "id": "3524791d-7456-4221-971d-055001832b21",
+      "id": "58abc18f-36d8-4783-aa8c-2e2ccf4175e9",
       "name": "loopBack",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -2154,7 +2070,7 @@
         },
         "timezone": "America/New_York"
       },
-      "id": "5058e7b7-c6da-4a3d-831e-9a3d1d788e9d",
+      "id": "3ac6b431-f637-4f8e-beef-9f6288627998",
       "name": "scheduleTrigger11PM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -2167,7 +2083,7 @@
       "parameters": {
         "jsCode": "const { DateTime } = require('luxon');\nconst staticData = $getWorkflowStaticData('global');\nconst auditLog = staticData.auditLog || [];\nconst errorLog = staticData.errorLog || [];\nconst today = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd');\n\nconst skipped = errorLog.filter(e => e.error_code === 'SKIPPED_COMPLIANCE').length;\nconst fallbacks = errorLog.filter(e => e.error_code === 'IMAGE_FALLBACK_USED').length;\nconst published = auditLog.filter(a => a.compliance_status).length;\nconst flagged = auditLog.filter(a => a.compliance_status === 'flagged');\nconst scores = auditLog.map(a => a.quality_score).filter(s => typeof s === 'number');\nconst avgScore = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 'N/A';\n\nconst report = `Facebook US News Daily Report \u2014 ${today}\n========================================\nTotal posts attempted: ${auditLog.length + skipped}\nTotal published: ${published}\nTotal skipped (compliance): ${skipped}\nTotal image fallbacks: ${fallbacks}\nAverage quality score: ${avgScore}\nFlagged posts: ${flagged.length}\n${flagged.length ? 'Flagged details: ' + JSON.stringify(flagged) : ''}\n========================================`;\n\nstaticData.dailyReports = staticData.dailyReports || [];\nstaticData.dailyReports.push({ date: today, report });\nif (staticData.dailyReports.length > 7) staticData.dailyReports = staticData.dailyReports.slice(-7);\n\nconst archived = staticData.dailyAuditArchive || [];\nstaticData.auditLog = [];\n\nreturn [{ json: { report, date: today, reportPath: `/data/reports/daily_${today}.txt` } }];\n"
       },
-      "id": "f98a0147-5e1b-4289-afd0-e96fb316be84",
+      "id": "50369f7d-87ea-4934-8159-b7c1bb47d559",
       "name": "dailySummary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2183,7 +2099,7 @@
         "subject": "={{ 'Facebook US News Daily Report \u2014 ' + $json.date }}",
         "text": "={{ $json.report }}"
       },
-      "id": "55ea8f3a-e887-4df0-8b27-f7dc052958a1",
+      "id": "52a987c8-76f8-46d1-b6c2-d0795424068f",
       "name": "sendDailyReport",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -2204,7 +2120,7 @@
       "parameters": {
         "jsCode": "const fs = require('fs');\nconst path = '/data/reports';\ntry { fs.mkdirSync(path, { recursive: true }); fs.writeFileSync(`${path}/daily_${$json.date}.txt`, $json.report); } catch(e) { /* docker volume may differ */ }\nreturn [$input.first()];"
       },
-      "id": "9c208bd6-a46a-472d-ab2a-6c1499e98116",
+      "id": "88453104-508a-4550-8912-a71402162887",
       "name": "writeDailyReportFile",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2217,7 +2133,7 @@
       "parameters": {
         "notice": "Enter /auto command in workflow notes or use paired Set node. Commands: run-now, test-one, review-log, check-token, pause, resume, flush-cache, daily-report, health-check, reset-errors"
       },
-      "id": "3ad32a6e-773f-4f59-9f96-30d86273538c",
+      "id": "5a28cf08-2e1a-4646-9c00-1777b742eeaa",
       "name": "manualTrigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -2241,7 +2157,7 @@
           ]
         }
       },
-      "id": "64838875-076d-4613-8b1e-5b7060e730e6",
+      "id": "196158f9-b46b-438c-a90a-6956529c40a9",
       "name": "setAutoCommand",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -2410,7 +2326,7 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "43974b84-5677-4221-85f3-9bc7fd87bc3c",
+      "id": "13eee3e0-6972-4281-b9a8-eeef3d4238e7",
       "name": "commandRouter",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
@@ -2423,7 +2339,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst { DateTime } = require('luxon');\nconst now = DateTime.now().setZone('America/New_York');\nconst schedule = [];\nfor (let i = 0; i < 10; i++) {\n  schedule.push({\n    slotIndex: i + 1,\n    epochMs: now.plus({ minutes: i * 5 }).toMillis(),\n    windowLabel: 'manual_run',\n    scheduledEt: now.plus({ minutes: i * 5 }).toFormat('HH:mm'),\n  });\n}\nstaticData.todaySchedule = schedule;\nstaticData.circuitBreakerHalted = false;\nreturn [{ json: { command: 'run-now', todaySchedule: schedule } }];\n"
       },
-      "id": "10e53298-c40f-422f-ac8f-c49ac81baff0",
+      "id": "92960c3c-3e53-443f-b58c-3965e4d5c5c9",
       "name": "autoRunNow",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2436,7 +2352,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.todaySchedule = [{\n  slotIndex: 1,\n  epochMs: Date.now() + 5000,\n  windowLabel: 'test_one',\n  scheduledEt: 'now',\n}];\nstaticData.circuitBreakerHalted = false;\nreturn [{ json: { command: 'test-one', mode: 'single_slot' } }];\n"
       },
-      "id": "cb0b68f2-f300-41da-b3b2-02f0a6e9e8dc",
+      "id": "fece705c-2100-454d-9a1b-06dd56792759",
       "name": "autoTestOne",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2449,7 +2365,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst log = staticData.auditLog || [];\nconsole.log('AUDIT LOG:', JSON.stringify(log, null, 2));\nreturn [{ json: { command: 'review-log', auditLog: log } }];\n"
       },
-      "id": "5737575d-2549-4cf0-a4d4-d1a942a5943c",
+      "id": "d1653aa1-84a8-4652-afe4-73149a035437",
       "name": "autoReviewLog",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2462,7 +2378,7 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'check-token', runTokenCheck: true } }];\n"
       },
-      "id": "ea3ed19b-7dfb-4180-b675-d520a6a4cf4c",
+      "id": "40e9bc59-0c81-4575-a2bd-37f1b4c63808",
       "name": "autoCheckToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2475,7 +2391,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.postedURLs = [];\nreturn [{ json: { command: 'flush-cache', flushed: true } }];\n"
       },
-      "id": "bb40e40b-6c8a-4640-84f2-25dfb8d0b84d",
+      "id": "cc01531d-cf83-4333-8cd1-32370d24249a",
       "name": "autoFlushCache",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2488,7 +2404,7 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = [];\nstaticData.consecutiveFailures = 0;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nreturn [{ json: { command: 'reset-errors', cleared: true } }];\n"
       },
-      "id": "d7865f2a-dd93-4cab-b1d3-c309747e0d66",
+      "id": "aae4eb52-6154-4a07-b4f7-ed2000e6dec3",
       "name": "autoResetErrors",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2501,7 +2417,7 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'health-check', pingApis: true } }];\n"
       },
-      "id": "ef681aa4-8498-4974-a9dd-e1aa10b9cedd",
+      "id": "e2ae8f17-8937-49b9-aa47-9116137e7c48",
       "name": "autoHealthCheck",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2514,7 +2430,7 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'pause', note: 'Deactivate workflow in n8n UI to pause scheduling' } }];"
       },
-      "id": "b32a2af4-2c8a-4413-9753-c85e0326ea81",
+      "id": "2225e5a8-f66a-4ce0-909c-fc392d77685c",
       "name": "autoPause",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2527,7 +2443,7 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'resume', note: 'Activate workflow in n8n UI to resume scheduling' } }];"
       },
-      "id": "1aac0a49-653d-4985-90d0-3699616ea010",
+      "id": "58804c3e-d4c2-4ebf-8314-3513f660c408",
       "name": "autoResume",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2545,12 +2461,12 @@
           "parameters": [
             {
               "name": "X-Api-Key",
-              "value": "={{ $credentials.NEWSAPI_KEY }}"
+              "value": "={{ $env.NEWSAPI_KEY }}"
             }
           ]
         }
       },
-      "id": "caa82a18-1dfa-4836-aa43-76b567901622",
+      "id": "432ec065-28b8-4123-a286-85dfe637c059",
       "name": "healthNewsAPI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2569,7 +2485,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $credentials.ANTHROPIC_API_KEY }}"
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -2578,7 +2494,7 @@
           ]
         }
       },
-      "id": "1fd571cb-86ed-46d3-b862-3b7972d52302",
+      "id": "561f229b-7192-425a-923d-2847e3f87ecb",
       "name": "healthAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2597,12 +2513,12 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"
+              "value": "Bearer {{ $env.OPENAI_API_KEY }}"
             }
           ]
         }
       },
-      "id": "6f207e14-1588-423b-ad50-497c55c09924",
+      "id": "e76df296-b964-4a09-9346-9195e5ec1653",
       "name": "healthOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2621,16 +2537,16 @@
           "parameters": [
             {
               "name": "input_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             },
             {
               "name": "access_token",
-              "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"
+              "value": "={{ $env.FB_ACCESS_TOKEN }}"
             }
           ]
         }
       },
-      "id": "7dbf853a-bf81-48c9-bdbd-d37cc1cf0059",
+      "id": "80cc73c1-47ee-4f33-923b-c706ace3c72c",
       "name": "healthMeta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2644,7 +2560,7 @@
       "parameters": {
         "jsCode": "const results = $input.all().map(i => i.json);\nreturn [{ json: { command: 'health-check', results } }];\n"
       },
-      "id": "cec394bf-7eef-41ea-bb4a-805522bff62b",
+      "id": "900eb63c-7e73-4f4e-af65-3815d218c046",
       "name": "healthAggregate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2659,7 +2575,7 @@
       "main": [
         [
           {
-            "node": "scheduleTrigger645AM",
+            "node": "computePostTimes",
             "type": "main",
             "index": 0
           }
@@ -2670,7 +2586,7 @@
       "main": [
         [
           {
-            "node": "computePostTimes",
+            "node": "storeTodaySchedule",
             "type": "main",
             "index": 0
           }
@@ -2681,7 +2597,7 @@
       "main": [
         [
           {
-            "node": "storeTodaySchedule",
+            "node": "productionGateNewsAPI",
             "type": "main",
             "index": 0
           }
@@ -2692,7 +2608,7 @@
       "main": [
         [
           {
-            "node": "productionGateNewsAPI",
+            "node": "productionGateAnthropic",
             "type": "main",
             "index": 0
           }
@@ -2703,7 +2619,7 @@
       "main": [
         [
           {
-            "node": "productionGateAnthropic",
+            "node": "productionGateOpenAI",
             "type": "main",
             "index": 0
           }
@@ -2714,7 +2630,7 @@
       "main": [
         [
           {
-            "node": "productionGateOpenAI",
+            "node": "productionGateMeta",
             "type": "main",
             "index": 0
           }
@@ -2725,7 +2641,7 @@
       "main": [
         [
           {
-            "node": "productionGateMeta",
+            "node": "evaluateProductionApis",
             "type": "main",
             "index": 0
           }
@@ -2736,7 +2652,7 @@
       "main": [
         [
           {
-            "node": "evaluateProductionApis",
+            "node": "productionGatePass",
             "type": "main",
             "index": 0
           }
@@ -2747,14 +2663,14 @@
       "main": [
         [
           {
-            "node": "productionGatePass",
+            "node": "prepareDailyRunEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "productionGatePass",
+            "node": "haltProduction",
             "type": "main",
             "index": 0
           }
@@ -2765,7 +2681,7 @@
       "main": [
         [
           {
-            "node": "prepareDailyRunEmail",
+            "node": "emailDailyRunStarted",
             "type": "main",
             "index": 0
           }
@@ -2776,7 +2692,7 @@
       "main": [
         [
           {
-            "node": "emailDailyRunStarted",
+            "node": "prepareCategory",
             "type": "main",
             "index": 0
           }
@@ -2787,7 +2703,7 @@
       "main": [
         [
           {
-            "node": "haltProduction",
+            "node": "prepareHaltEmail",
             "type": "main",
             "index": 0
           }
@@ -2798,7 +2714,7 @@
       "main": [
         [
           {
-            "node": "prepareHaltEmail",
+            "node": "emailProductionHalted",
             "type": "main",
             "index": 0
           }
@@ -2809,7 +2725,7 @@
       "main": [
         [
           {
-            "node": "prepareCategory",
+            "node": "fetchPoliticsNews",
             "type": "main",
             "index": 0
           }
@@ -2820,7 +2736,7 @@
       "main": [
         [
           {
-            "node": "fetchPoliticsNews",
+            "node": "fetchCelebritiesNews",
             "type": "main",
             "index": 0
           }
@@ -2831,7 +2747,7 @@
       "main": [
         [
           {
-            "node": "fetchCelebritiesNews",
+            "node": "mergeNewsFeeds",
             "type": "main",
             "index": 0
           }
@@ -2842,7 +2758,7 @@
       "main": [
         [
           {
-            "node": "mergeNewsFeeds",
+            "node": "tagCategory",
             "type": "main",
             "index": 0
           }
@@ -2853,7 +2769,7 @@
       "main": [
         [
           {
-            "node": "tagCategory",
+            "node": "filterArticles",
             "type": "main",
             "index": 0
           }
@@ -2864,7 +2780,7 @@
       "main": [
         [
           {
-            "node": "filterArticles",
+            "node": "checkNeedsFallback",
             "type": "main",
             "index": 0
           }
@@ -2875,14 +2791,14 @@
       "main": [
         [
           {
-            "node": "checkNeedsFallback",
+            "node": "fetchFallbackNews",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "checkNeedsFallback",
+            "node": "passthroughNoFallback",
             "type": "main",
             "index": 0
           }
@@ -2893,7 +2809,7 @@
       "main": [
         [
           {
-            "node": "fetchFallbackNews",
+            "node": "fillRemainingSlots",
             "type": "main",
             "index": 0
           }
@@ -2904,7 +2820,7 @@
       "main": [
         [
           {
-            "node": "fillRemainingSlots",
+            "node": "mergeScheduleWithArticles",
             "type": "main",
             "index": 0
           }
@@ -2915,7 +2831,7 @@
       "main": [
         [
           {
-            "node": "passthroughNoFallback",
+            "node": "mergeScheduleWithArticles",
             "type": "main",
             "index": 0
           }
@@ -2926,7 +2842,7 @@
       "main": [
         [
           {
-            "node": "mergeScheduleWithArticles",
+            "node": "splitInBatches",
             "type": "main",
             "index": 0
           }
@@ -2937,7 +2853,7 @@
       "main": [
         [
           {
-            "node": "splitInBatches",
+            "node": "prepareSlotWait",
             "type": "main",
             "index": 0
           }
@@ -2948,7 +2864,7 @@
       "main": [
         [
           {
-            "node": "prepareSlotWait",
+            "node": "checkHalted",
             "type": "main",
             "index": 0
           }
@@ -2959,14 +2875,14 @@
       "main": [
         [
           {
-            "node": "checkHalted",
+            "node": "preparePostSkippedEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "checkHalted",
+            "node": "waitForSlot",
             "type": "main",
             "index": 0
           }
@@ -2977,7 +2893,7 @@
       "main": [
         [
           {
-            "node": "preparePostSkippedEmail",
+            "node": "emailPostSkipped",
             "type": "main",
             "index": 0
           }
@@ -2988,7 +2904,7 @@
       "main": [
         [
           {
-            "node": "emailPostSkipped",
+            "node": "skipHalted",
             "type": "main",
             "index": 0
           }
@@ -2999,7 +2915,7 @@
       "main": [
         [
           {
-            "node": "skipHalted",
+            "node": "loopBack",
             "type": "main",
             "index": 0
           }
@@ -3010,7 +2926,7 @@
       "main": [
         [
           {
-            "node": "waitForSlot",
+            "node": "checkFBToken",
             "type": "main",
             "index": 0
           }
@@ -3021,7 +2937,7 @@
       "main": [
         [
           {
-            "node": "checkFBToken",
+            "node": "parseFBToken",
             "type": "main",
             "index": 0
           }
@@ -3032,7 +2948,7 @@
       "main": [
         [
           {
-            "node": "parseFBToken",
+            "node": "tokenGate",
             "type": "main",
             "index": 0
           }
@@ -3043,14 +2959,14 @@
       "main": [
         [
           {
-            "node": "tokenGate",
+            "node": "prepareTokenAlertEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "tokenGate",
+            "node": "slotApiGateAnthropic",
             "type": "main",
             "index": 0
           }
@@ -3061,7 +2977,7 @@
       "main": [
         [
           {
-            "node": "prepareTokenAlertEmail",
+            "node": "emailTokenExpired",
             "type": "main",
             "index": 0
           }
@@ -3072,7 +2988,7 @@
       "main": [
         [
           {
-            "node": "emailTokenExpired",
+            "node": "skipInvalidToken",
             "type": "main",
             "index": 0
           }
@@ -3083,7 +2999,7 @@
       "main": [
         [
           {
-            "node": "skipInvalidToken",
+            "node": "loopBack",
             "type": "main",
             "index": 0
           }
@@ -3094,7 +3010,7 @@
       "main": [
         [
           {
-            "node": "slotApiGateAnthropic",
+            "node": "evaluateSlotAnthropic",
             "type": "main",
             "index": 0
           }
@@ -3105,7 +3021,7 @@
       "main": [
         [
           {
-            "node": "evaluateSlotAnthropic",
+            "node": "slotAnthropicPass",
             "type": "main",
             "index": 0
           }
@@ -3116,14 +3032,14 @@
       "main": [
         [
           {
-            "node": "slotAnthropicPass",
+            "node": "prepareSlotStartEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "slotAnthropicPass",
+            "node": "haltProduction",
             "type": "main",
             "index": 0
           }
@@ -3134,7 +3050,7 @@
       "main": [
         [
           {
-            "node": "prepareSlotStartEmail",
+            "node": "emailSlotPostStarting",
             "type": "main",
             "index": 0
           }
@@ -3145,7 +3061,7 @@
       "main": [
         [
           {
-            "node": "emailSlotPostStarting",
+            "node": "generateCaption",
             "type": "main",
             "index": 0
           }
@@ -3156,7 +3072,7 @@
       "main": [
         [
           {
-            "node": "generateCaption",
+            "node": "extractCaption",
             "type": "main",
             "index": 0
           }
@@ -3167,7 +3083,7 @@
       "main": [
         [
           {
-            "node": "extractCaption",
+            "node": "prePublishReview",
             "type": "main",
             "index": 0
           }
@@ -3178,7 +3094,7 @@
       "main": [
         [
           {
-            "node": "prePublishReview",
+            "node": "parsePrePublishReview",
             "type": "main",
             "index": 0
           }
@@ -3189,7 +3105,7 @@
       "main": [
         [
           {
-            "node": "parsePrePublishReview",
+            "node": "reviewGate",
             "type": "main",
             "index": 0
           }
@@ -3200,14 +3116,14 @@
       "main": [
         [
           {
-            "node": "reviewGate",
+            "node": "markCaptionReviewPassed",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "reviewGate",
+            "node": "incrementRewriteAttempt",
             "type": "main",
             "index": 0
           }
@@ -3218,7 +3134,7 @@
       "main": [
         [
           {
-            "node": "markCaptionReviewPassed",
+            "node": "captionReviewReadyGate",
             "type": "main",
             "index": 0
           }
@@ -3229,14 +3145,14 @@
       "main": [
         [
           {
-            "node": "captionReviewReadyGate",
+            "node": "buildImagePrompt",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "captionReviewReadyGate",
+            "node": "logBlockedPublish",
             "type": "main",
             "index": 0
           }
@@ -3247,7 +3163,7 @@
       "main": [
         [
           {
-            "node": "incrementRewriteAttempt",
+            "node": "checkRewriteAttempts",
             "type": "main",
             "index": 0
           }
@@ -3258,14 +3174,14 @@
       "main": [
         [
           {
-            "node": "checkRewriteAttempts",
+            "node": "logSkippedCompliance",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "checkRewriteAttempts",
+            "node": "rewriteCaption",
             "type": "main",
             "index": 0
           }
@@ -3276,7 +3192,7 @@
       "main": [
         [
           {
-            "node": "rewriteCaption",
+            "node": "rewriteCaptionExtract",
             "type": "main",
             "index": 0
           }
@@ -3287,7 +3203,7 @@
       "main": [
         [
           {
-            "node": "rewriteCaptionExtract",
+            "node": "prePublishReview",
             "type": "main",
             "index": 0
           }
@@ -3298,7 +3214,7 @@
       "main": [
         [
           {
-            "node": "logSkippedCompliance",
+            "node": "preparePostSkippedEmail",
             "type": "main",
             "index": 0
           }
@@ -3309,7 +3225,7 @@
       "main": [
         [
           {
-            "node": "buildImagePrompt",
+            "node": "imageReview",
             "type": "main",
             "index": 0
           }
@@ -3320,7 +3236,7 @@
       "main": [
         [
           {
-            "node": "imageReview",
+            "node": "parseImageReview",
             "type": "main",
             "index": 0
           }
@@ -3331,7 +3247,7 @@
       "main": [
         [
           {
-            "node": "parseImageReview",
+            "node": "imageReviewGate",
             "type": "main",
             "index": 0
           }
@@ -3342,14 +3258,14 @@
       "main": [
         [
           {
-            "node": "imageReviewGate",
+            "node": "slotApiGateOpenAI",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "imageReviewGate",
+            "node": "applyImageFallback",
             "type": "main",
             "index": 0
           }
@@ -3360,7 +3276,7 @@
       "main": [
         [
           {
-            "node": "applyImageFallback",
+            "node": "prepareImageFallbackEmail",
             "type": "main",
             "index": 0
           }
@@ -3371,7 +3287,7 @@
       "main": [
         [
           {
-            "node": "prepareImageFallbackEmail",
+            "node": "emailImageFallbackUsed",
             "type": "main",
             "index": 0
           }
@@ -3382,7 +3298,7 @@
       "main": [
         [
           {
-            "node": "emailImageFallbackUsed",
+            "node": "mergeImagePaths",
             "type": "main",
             "index": 0
           }
@@ -3393,7 +3309,7 @@
       "main": [
         [
           {
-            "node": "slotApiGateOpenAI",
+            "node": "evaluateSlotOpenAI",
             "type": "main",
             "index": 0
           }
@@ -3404,7 +3320,7 @@
       "main": [
         [
           {
-            "node": "evaluateSlotOpenAI",
+            "node": "slotOpenAIPass",
             "type": "main",
             "index": 0
           }
@@ -3415,14 +3331,14 @@
       "main": [
         [
           {
-            "node": "slotOpenAIPass",
+            "node": "generateImage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "slotOpenAIPass",
+            "node": "haltProduction",
             "type": "main",
             "index": 0
           }
@@ -3433,7 +3349,7 @@
       "main": [
         [
           {
-            "node": "generateImage",
+            "node": "extractImageUrl",
             "type": "main",
             "index": 0
           }
@@ -3444,7 +3360,7 @@
       "main": [
         [
           {
-            "node": "extractImageUrl",
+            "node": "mergeImagePaths",
             "type": "main",
             "index": 0
           }
@@ -3455,7 +3371,7 @@
       "main": [
         [
           {
-            "node": "mergeImagePaths",
+            "node": "finalPublishGate",
             "type": "main",
             "index": 0
           }
@@ -3466,14 +3382,14 @@
       "main": [
         [
           {
-            "node": "finalPublishGate",
+            "node": "publishToFacebook",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "finalPublishGate",
+            "node": "logBlockedPublish",
             "type": "main",
             "index": 0
           }
@@ -3484,7 +3400,7 @@
       "main": [
         [
           {
-            "node": "logBlockedPublish",
+            "node": "preparePostSkippedEmail",
             "type": "main",
             "index": 0
           }
@@ -3495,14 +3411,14 @@
       "main": [
         [
           {
-            "node": "publishToFacebook",
+            "node": "handlePublishSuccess",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "publishToFacebook",
+            "node": "handlePublishError",
             "type": "main",
             "index": 0
           }
@@ -3513,7 +3429,7 @@
       "main": [
         [
           {
-            "node": "handlePublishError",
+            "node": "preparePublishFailEmail",
             "type": "main",
             "index": 0
           }
@@ -3524,7 +3440,7 @@
       "main": [
         [
           {
-            "node": "preparePublishFailEmail",
+            "node": "emailPublishFailed",
             "type": "main",
             "index": 0
           }
@@ -3535,7 +3451,7 @@
       "main": [
         [
           {
-            "node": "emailPublishFailed",
+            "node": "checkCircuitAfterError",
             "type": "main",
             "index": 0
           }
@@ -3546,14 +3462,14 @@
       "main": [
         [
           {
-            "node": "checkCircuitAfterError",
+            "node": "prepareCircuitBreakerEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "checkCircuitAfterError",
+            "node": "loopBack",
             "type": "main",
             "index": 0
           }
@@ -3564,7 +3480,7 @@
       "main": [
         [
           {
-            "node": "prepareCircuitBreakerEmail",
+            "node": "emailCircuitBreaker",
             "type": "main",
             "index": 0
           }
@@ -3575,7 +3491,7 @@
       "main": [
         [
           {
-            "node": "emailCircuitBreaker",
+            "node": "loopBack",
             "type": "main",
             "index": 0
           }
@@ -3586,7 +3502,7 @@
       "main": [
         [
           {
-            "node": "handlePublishSuccess",
+            "node": "postPublishAudit",
             "type": "main",
             "index": 0
           }
@@ -3597,7 +3513,7 @@
       "main": [
         [
           {
-            "node": "postPublishAudit",
+            "node": "parsePostPublishAudit",
             "type": "main",
             "index": 0
           }
@@ -3608,7 +3524,7 @@
       "main": [
         [
           {
-            "node": "parsePostPublishAudit",
+            "node": "appendAuditLog",
             "type": "main",
             "index": 0
           }
@@ -3619,7 +3535,7 @@
       "main": [
         [
           {
-            "node": "appendAuditLog",
+            "node": "preparePostSuccessEmail",
             "type": "main",
             "index": 0
           }
@@ -3630,7 +3546,7 @@
       "main": [
         [
           {
-            "node": "preparePostSuccessEmail",
+            "node": "emailPostPublished",
             "type": "main",
             "index": 0
           }
@@ -3641,7 +3557,7 @@
       "main": [
         [
           {
-            "node": "emailPostPublished",
+            "node": "checkFlaggedAudit",
             "type": "main",
             "index": 0
           }
@@ -3652,14 +3568,14 @@
       "main": [
         [
           {
-            "node": "checkFlaggedAudit",
+            "node": "prepareFlaggedPostEmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "checkFlaggedAudit",
+            "node": "updatePostedURLs",
             "type": "main",
             "index": 0
           }
@@ -3670,7 +3586,7 @@
       "main": [
         [
           {
-            "node": "prepareFlaggedPostEmail",
+            "node": "emailFlaggedPost",
             "type": "main",
             "index": 0
           }
@@ -3681,7 +3597,7 @@
       "main": [
         [
           {
-            "node": "emailFlaggedPost",
+            "node": "updatePostedURLs",
             "type": "main",
             "index": 0
           }
@@ -3692,7 +3608,7 @@
       "main": [
         [
           {
-            "node": "updatePostedURLs",
+            "node": "loopBack",
             "type": "main",
             "index": 0
           }
@@ -3703,7 +3619,7 @@
       "main": [
         [
           {
-            "node": "loopBack",
+            "node": "splitInBatches",
             "type": "main",
             "index": 0
           }
@@ -3714,7 +3630,7 @@
       "main": [
         [
           {
-            "node": "scheduleTrigger11PM",
+            "node": "dailySummary",
             "type": "main",
             "index": 0
           }
@@ -3725,7 +3641,7 @@
       "main": [
         [
           {
-            "node": "dailySummary",
+            "node": "sendDailyReport",
             "type": "main",
             "index": 0
           }
@@ -3736,7 +3652,7 @@
       "main": [
         [
           {
-            "node": "sendDailyReport",
+            "node": "writeDailyReportFile",
             "type": "main",
             "index": 0
           }
@@ -3747,7 +3663,7 @@
       "main": [
         [
           {
-            "node": "manualTrigger",
+            "node": "setAutoCommand",
             "type": "main",
             "index": 0
           }
@@ -3758,7 +3674,7 @@
       "main": [
         [
           {
-            "node": "setAutoCommand",
+            "node": "commandRouter",
             "type": "main",
             "index": 0
           }
@@ -3769,70 +3685,70 @@
       "main": [
         [
           {
-            "node": "commandRouter",
+            "node": "autoRunNow",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoTestOne",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoReviewLog",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoCheckToken",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoFlushCache",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "dailySummary",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoHealthCheck",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoResetErrors",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoPause",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "commandRouter",
+            "node": "autoResume",
             "type": "main",
             "index": 0
           }
@@ -3843,7 +3759,7 @@
       "main": [
         [
           {
-            "node": "autoRunNow",
+            "node": "productionGateNewsAPI",
             "type": "main",
             "index": 0
           }
@@ -3854,7 +3770,7 @@
       "main": [
         [
           {
-            "node": "autoTestOne",
+            "node": "productionGateNewsAPI",
             "type": "main",
             "index": 0
           }
@@ -3865,7 +3781,7 @@
       "main": [
         [
           {
-            "node": "autoCheckToken",
+            "node": "checkFBToken",
             "type": "main",
             "index": 0
           }
@@ -3876,7 +3792,7 @@
       "main": [
         [
           {
-            "node": "autoHealthCheck",
+            "node": "healthNewsAPI",
             "type": "main",
             "index": 0
           }
@@ -3887,7 +3803,7 @@
       "main": [
         [
           {
-            "node": "healthNewsAPI",
+            "node": "healthAnthropic",
             "type": "main",
             "index": 0
           }
@@ -3898,7 +3814,7 @@
       "main": [
         [
           {
-            "node": "healthAnthropic",
+            "node": "healthOpenAI",
             "type": "main",
             "index": 0
           }
@@ -3909,7 +3825,7 @@
       "main": [
         [
           {
-            "node": "healthOpenAI",
+            "node": "healthMeta",
             "type": "main",
             "index": 0
           }
@@ -3920,7 +3836,7 @@
       "main": [
         [
           {
-            "node": "healthMeta",
+            "node": "healthAggregate",
             "type": "main",
             "index": 0
           }
@@ -3952,5 +3868,5 @@
     "templateCredsSetupCompleted": false,
     "instanceId": "facebook-us-news-automation"
   },
-  "versionId": "62350657-3ec4-437e-8378-147599004ae5"
+  "versionId": "23a37ce4-6dec-4231-bf2c-bb6bf8ca18f7"
 }

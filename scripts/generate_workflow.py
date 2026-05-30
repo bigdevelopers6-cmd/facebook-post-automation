@@ -870,7 +870,7 @@ def wire(src, dst, out=0, inp=0):
     connections.setdefault(src, {"main": []})
     while len(connections[src]["main"]) <= out:
         connections[src]["main"].append([])
-    connections[src]["main"][out].append(conn(dst, src, out, inp))
+    connections[src]["main"][out].append(conn(src, dst, out, inp))
 
 # Positions layout
 Y0, Y1, Y2, Y3, Y4, Y5 = 0, 300, 600, 900, 1200, 1500
@@ -902,7 +902,7 @@ N["storeTodaySchedule"] = add_node(node("storeTodaySchedule", "n8n-nodes-base.co
 N["productionGateNewsAPI"] = add_node(node(
     "productionGateNewsAPI", "n8n-nodes-base.httpRequest", [X(3), Y0],
     {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]}},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueRegularOutput",
 ))
@@ -910,7 +910,7 @@ N["productionGateAnthropic"] = add_node(node(
     "productionGateAnthropic", "n8n-nodes-base.httpRequest", [X(4), Y0 - 80],
     {"method": "GET", "url": "https://api.anthropic.com/v1/models",
      "sendHeaders": True, "headerParameters": {"parameters": [
-         {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+         {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
          {"name": "anthropic-version", "value": "2023-06-01"},
      ]}},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
@@ -919,7 +919,7 @@ N["productionGateAnthropic"] = add_node(node(
 N["productionGateOpenAI"] = add_node(node(
     "productionGateOpenAI", "n8n-nodes-base.httpRequest", [X(5), Y0 - 80],
     {"method": "GET", "url": "https://api.openai.com/v1/models",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $env.OPENAI_API_KEY }}"}]}},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "OPENAI_API_KEY", "name": "OPENAI_API_KEY"}},
     onError="continueRegularOutput",
 ))
@@ -927,8 +927,8 @@ N["productionGateMeta"] = add_node(node(
     "productionGateMeta", "n8n-nodes-base.httpRequest", [X(6), Y0 - 80],
     {"method": "GET", "url": "https://graph.facebook.com/debug_token",
      "sendQuery": True, "queryParameters": {"parameters": [
-         {"name": "input_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
-         {"name": "access_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
+         {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+         {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
      ]}},
     typeVersion=4.2, onError="continueRegularOutput",
 ))
@@ -969,7 +969,7 @@ N["fetchPoliticsNews"] = add_node(node(
             {"name": "pageSize", "value": "25"},
         ]},
         "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]},
+        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -987,7 +987,7 @@ N["fetchCelebritiesNews"] = add_node(node(
             {"name": "pageSize", "value": "25"},
         ]},
         "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]},
+        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1017,7 +1017,7 @@ N["fetchFallbackNews"] = add_node(node(
             {"name": "pageSize", "value": "20"},
         ]},
         "sendHeaders": True,
-        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]},
+        "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]},
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
@@ -1054,8 +1054,8 @@ N["checkFBToken"] = add_node(node(
         "url": "https://graph.facebook.com/debug_token",
         "sendQuery": True,
         "queryParameters": {"parameters": [
-            {"name": "input_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
-            {"name": "access_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
+            {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+            {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
         ]},
     },
     typeVersion=4.2, onError="continueErrorOutput",
@@ -1133,7 +1133,7 @@ N["generateCaption"] = add_node(node(
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
             {"name": "anthropic-version", "value": "2023-06-01"},
             {"name": "content-type", "value": "application/json"},
         ]},
@@ -1163,7 +1163,7 @@ N["prePublishReview"] = add_node(node(
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
             {"name": "anthropic-version", "value": "2023-06-01"},
             {"name": "content-type", "value": "application/json"},
         ]},
@@ -1208,7 +1208,7 @@ N["rewriteCaption"] = add_node(node(
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
             {"name": "anthropic-version", "value": "2023-06-01"},
             {"name": "content-type", "value": "application/json"},
         ]},
@@ -1237,7 +1237,7 @@ N["imageReview"] = add_node(node(
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
             {"name": "anthropic-version", "value": "2023-06-01"},
             {"name": "content-type", "value": "application/json"},
         ]},
@@ -1263,7 +1263,7 @@ N["generateImage"] = add_node(node(
         "url": "https://api.openai.com/v1/images/generations",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "Authorization", "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"},
+            {"name": "Authorization", "value": "Bearer {{ $env.OPENAI_API_KEY }}"},
             {"name": "Content-Type", "value": "application/json"},
         ]},
         "sendBody": True,
@@ -1295,7 +1295,7 @@ N["slotApiGateAnthropic"] = add_node(node(
     "slotApiGateAnthropic", "n8n-nodes-base.httpRequest", [X(7), Y1],
     {"method": "GET", "url": "https://api.anthropic.com/v1/models",
      "sendHeaders": True, "headerParameters": {"parameters": [
-         {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+         {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
          {"name": "anthropic-version", "value": "2023-06-01"},
      ]}},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "ANTHROPIC_API_KEY", "name": "ANTHROPIC_API_KEY"}},
@@ -1312,7 +1312,7 @@ N["slotAnthropicPass"] = add_node(node(
 N["slotApiGateOpenAI"] = add_node(node(
     "slotApiGateOpenAI", "n8n-nodes-base.httpRequest", [X(15), Y2 + 60],
     {"method": "GET", "url": "https://api.openai.com/v1/models",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $env.OPENAI_API_KEY }}"}]}},
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "OPENAI_API_KEY", "name": "OPENAI_API_KEY"}},
     onError="continueRegularOutput",
 ))
@@ -1336,7 +1336,7 @@ N["publishToFacebook"] = add_node(node(
         "bodyParameters": {"parameters": [
             {"name": "url", "value": "={{ $json.finalImageUrl }}"},
             {"name": "message", "value": "={{ $json.caption }}"},
-            {"name": "access_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
+            {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
         ]},
     },
     typeVersion=4.2, onError="continueErrorOutput",
@@ -1371,7 +1371,7 @@ N["postPublishAudit"] = add_node(node(
         "url": "https://api.anthropic.com/v1/messages",
         "sendHeaders": True,
         "headerParameters": {"parameters": [
-            {"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"},
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
             {"name": "anthropic-version", "value": "2023-06-01"},
             {"name": "content-type", "value": "application/json"},
         ]},
@@ -1473,27 +1473,27 @@ N["autoResume"] = add_node(node("autoResume", "n8n-nodes-base.code", [X(3) + 260
 N["healthNewsAPI"] = add_node(node(
     "healthNewsAPI", "n8n-nodes-base.httpRequest", [X(4) + 2600, Y0 + 500],
     {"method": "GET", "url": "https://newsapi.org/v2/top-headlines?country=us&pageSize=1",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $credentials.NEWSAPI_KEY }}"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "X-Api-Key", "value": "={{ $env.NEWSAPI_KEY }}"}]}},
     typeVersion=4.2, onError="continueErrorOutput",
 ))
 N["healthAnthropic"] = add_node(node(
     "healthAnthropic", "n8n-nodes-base.httpRequest", [X(5) + 2600, Y0 + 500],
     {"method": "GET", "url": "https://api.anthropic.com/v1/models",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "x-api-key", "value": "={{ $credentials.ANTHROPIC_API_KEY }}"}, {"name": "anthropic-version", "value": "2023-06-01"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"}, {"name": "anthropic-version", "value": "2023-06-01"}]}},
     typeVersion=4.2, onError="continueErrorOutput",
 ))
 N["healthOpenAI"] = add_node(node(
     "healthOpenAI", "n8n-nodes-base.httpRequest", [X(6) + 2600, Y0 + 500],
     {"method": "GET", "url": "https://api.openai.com/v1/models",
-     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $credentials.OPENAI_API_KEY }}"}]}},
+     "sendHeaders": True, "headerParameters": {"parameters": [{"name": "Authorization", "value": "Bearer {{ $env.OPENAI_API_KEY }}"}]}},
     typeVersion=4.2, onError="continueErrorOutput",
 ))
 N["healthMeta"] = add_node(node(
     "healthMeta", "n8n-nodes-base.httpRequest", [X(7) + 2600, Y0 + 500],
     {"method": "GET", "url": "https://graph.facebook.com/debug_token",
      "sendQuery": True, "queryParameters": {"parameters": [
-         {"name": "input_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
-         {"name": "access_token", "value": "={{ $credentials.FB_PAGE_ACCESS_TOKEN }}"},
+         {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+         {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
      ]}},
     typeVersion=4.2, onError="continueErrorOutput",
 ))
@@ -1635,7 +1635,14 @@ wire("healthAnthropic", "healthOpenAI")
 wire("healthOpenAI", "healthMeta")
 wire("healthMeta", "healthAggregate")
 
+# Remove httpHeaderAuth credentials from HTTP nodes (using env vars instead)
+for n in nodes:
+    if n["type"] == "n8n-nodes-base.httpRequest" and "credentials" in n:
+        if "httpHeaderAuth" in n.get("credentials", {}):
+            del n["credentials"]
+
 workflow = {
+    "id": "facebook-us-news-001",
     "name": "Facebook US News Automation Agent",
     "nodes": nodes,
     "connections": connections,

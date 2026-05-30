@@ -18,6 +18,9 @@ services:
       - N8N_ALERT_FROM=bigdevelopers6@gmail.com
       - N8N_ALERT_TO=talhazahoor786@gmail.com
       - FB_PAGE_ID=1191676374021102
+      - FB_ACCESS_TOKEN=${FB_ACCESS_TOKEN}
+      - NEWSAPI_KEY=${NEWSAPI_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
     volumes:
