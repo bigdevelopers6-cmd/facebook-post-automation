@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7d-split-bypass"
+WORKFLOW_BUILD = "2026-05-30-trace-v7e-route-json"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -408,26 +408,27 @@ return items.map((article, idx) => {
 
 PREPARE_SLOT_WAIT = r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
+const webhookTestMode = staticData.webhookTestMode === true || item.webhookTestMode === true;
 if (staticData.forcePostTest) {
   staticData.forcePostTest = false;
   const __sdS=$getWorkflowStaticData('global');
   (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: forcePostTest');
-  return [{ json: { ...item, waitMs: 0, halted: false } }];
+  return [{ json: { ...item, waitMs: 0, halted: false, webhookTestMode } }];
 }
 if (staticData.productionHalted) {
   const __sdS=$getWorkflowStaticData('global');
   (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP productionHalted');
-  return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];
+  return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT', webhookTestMode } }];
 }
 if (staticData.circuitBreakerHalted) {
   const __sdS=$getWorkflowStaticData('global');
   (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP circuitBreaker');
-  return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
+  return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER', webhookTestMode } }];
 }
 const waitMs = Math.max(0, item.epochMs - Date.now());
 const __sdS=$getWorkflowStaticData('global');
 (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: waitMs='+waitMs);
-return [{ json: { ...item, waitMs, halted: false } }];
+return [{ json: { ...item, waitMs, halted: false, webhookTestMode } }];
 """
 
 EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global');
@@ -1136,9 +1137,12 @@ if (wasWebhook) {
   if (!published) {
     const trace = log.slice(-25).join(' | ');
     const ranSlot = log.some(l => String(l).includes('prepareSlotWait'));
-    const hint = !ranSlot
-      ? 'LOOP_EMPTY (splitInBatches had 0 slot runs — check logMergeStats items=)'
-      : 'SKIP_TOKEN_INVALID / BLOCKED_PUBLISH / SKIP_HALTED — see trace';
+    const picked = log.some(l => String(l).includes('pickFirstArticle'));
+    const hint = !picked && wasWebhook
+      ? 'ROUTE_FAILED (IF did not use pickFirstArticle — need v7e-route-json on item.webhookTestMode)'
+      : (!ranSlot
+      ? 'LOOP_EMPTY (no prepareSlotWait — splitInBatches done branch fired)'
+      : 'SKIP_TOKEN_INVALID / BLOCKED_PUBLISH / SKIP_HALTED — see trace');
     throw new Error('WEBHOOK_TEST_NO_POST: ' + hint + ' | Trace: ' + trace);
   }
 }
@@ -1177,13 +1181,15 @@ return [$input.first()];
 """
 
 LOG_MERGE_STATS = r"""const items = $input.all();
+const sd = $getWorkflowStaticData('global');
+const webhookTest = sd.webhookTestMode === true;
 const __sdL=$getWorkflowStaticData('global');
-(__sdL.pipelineLog=__sdL.pipelineLog||[]).push('logMergeStats: items='+items.length);
-console.log('[PIPELINE] logMergeStats items='+items.length);
+(__sdL.pipelineLog=__sdL.pipelineLog||[]).push('logMergeStats: items='+items.length+' webhookTest='+webhookTest);
+console.log('[PIPELINE] logMergeStats', items.length, webhookTest);
 if (items.length === 0) {
-  throw new Error('LOG_MERGE_STATS: 0 items into splitInBatches — check filter/merge path');
+  throw new Error('LOG_MERGE_STATS: 0 items — check filter/merge path');
 }
-return items;
+return items.map(i => ({ json: { ...i.json, webhookTestMode: webhookTest } }));
 """
 
 PICK_FIRST_ARTICLE = r"""const items = $input.all();
@@ -1192,7 +1198,15 @@ const __sdP=$getWorkflowStaticData('global');
 if (items.length === 0) {
   throw new Error('pickFirstArticle: 0 items — logMergeStats failed');
 }
-return [items[0]];
+return [{ json: { ...items[0].json, webhookTestMode: true } }];
+"""
+
+TAG_LOOP_END = r"""const sd = $getWorkflowStaticData('global');
+const j = $input.first()?.json || {};
+const webhookTestMode = sd.webhookTestMode === true || j.webhookTestMode === true;
+const __sdT=$getWorkflowStaticData('global');
+(__sdT.pipelineLog=__sdT.pipelineLog||[]).push('tagLoopEnd: webhookTest='+webhookTestMode);
+return [{ json: { ...j, webhookTestMode } }];
 """
 
 HEALTH_AGGREGATE = r"""const results = $input.all().map(i => i.json);
@@ -1487,7 +1501,7 @@ N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10
 N["routeWebhookBatch"] = add_node(node(
     "routeWebhookBatch", "n8n-nodes-base.if", [X(10), Y1 + 140],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
-     "conditions": [{"id": "wb1", "leftValue": "={{ $getWorkflowStaticData('global').webhookTestMode === true }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "conditions": [{"id": "wb1", "leftValue": "={{ $json.webhookTestMode }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
      "combinator": "and"}},
     typeVersion=2.2,
 ))
@@ -1883,10 +1897,11 @@ N["emailFlaggedPost"] = add_node(smtp_email(
 ))
 N["updatePostedURLs"] = add_node(node("updatePostedURLs", "n8n-nodes-base.code", [X(6), Y4], {"jsCode": UPDATE_POSTED_URLS}, typeVersion=2))
 N["loopBack"] = add_node(node("loopBack", "n8n-nodes-base.noOp", [X(7), Y4], {}, typeVersion=1))
+N["tagLoopEnd"] = add_node(node("tagLoopEnd", "n8n-nodes-base.code", [X(7), Y4 + 80], {"jsCode": TAG_LOOP_END}, typeVersion=2))
 N["routeLoopEnd"] = add_node(node(
     "routeLoopEnd", "n8n-nodes-base.if", [X(8), Y4],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
-     "conditions": [{"id": "le1", "leftValue": "={{ $getWorkflowStaticData('global').webhookTestMode === true }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "conditions": [{"id": "le1", "leftValue": "={{ $json.webhookTestMode }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
      "combinator": "and"}},
     typeVersion=2.2,
 ))
@@ -2103,7 +2118,8 @@ wire("prepareFlaggedPostEmail", "emailFlaggedPost")
 wire("emailFlaggedPost", "updatePostedURLs")
 wire("checkFlaggedAudit", "updatePostedURLs", 1)
 wire("updatePostedURLs", "loopBack")
-wire("loopBack", "routeLoopEnd")
+wire("loopBack", "tagLoopEnd")
+wire("tagLoopEnd", "routeLoopEnd")
 wire("routeLoopEnd", "assertWebhookPost", 0)  # webhook single slot finished
 wire("routeLoopEnd", "splitInBatches", 1)  # next scheduled slot
 
