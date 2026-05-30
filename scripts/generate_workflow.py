@@ -256,6 +256,15 @@ for (const a of filtered) {
 }
 mixed = mixed.slice(0, 10);
 
+const testMode = staticData.singleSlotTest === true;
+if (mixed.length === 0) {
+  const pool = primary.filter(isValid).filter(a => !postedURLs.includes(a.url));
+  const relaxed = testMode
+    ? pool.slice(0, 3)
+    : pool.filter(a => topicScore(a) > 0).slice(0, 10);
+  mixed = relaxed.length ? relaxed : pool.slice(0, testMode ? 1 : 5);
+}
+
 const output = mixed.map(a => ({
   title: a.title,
   description: a.description,
@@ -1002,13 +1011,37 @@ AUTO_HEALTH_CHECK = r"""return [{ json: { command: 'health-check', pingApis: tru
 CATEGORY_PREP = r"""return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];
 """
 
-MERGE_NEWS_FEEDS = r"""const politics = $('fetchPoliticsNews').first().json.articles || [];
-const celebrities = $('fetchCelebritiesNews').first().json.articles || [];
+MERGE_NEWS_FEEDS = r"""function safeArticles(nodeName) {
+  try {
+    if (!$(nodeName).isExecuted) return [];
+    const j = $(nodeName).first().json;
+    if (j.error || (j.status && j.status !== 'ok')) return [];
+    return j.articles || [];
+  } catch (e) {
+    return [];
+  }
+}
+const politics = safeArticles('fetchPoliticsNews');
+const celebrities = safeArticles('fetchCelebritiesNews');
 const articles = [
   ...politics.map(a => ({ ...a, _topic: 'politics' })),
   ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),
 ];
+console.log('MERGE_NEWS_FEEDS politics=' + politics.length + ' celebrities=' + celebrities.length);
 return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
+"""
+
+LOG_FILTER_STATS = r"""const j = $input.first().json;
+console.log('FILTER_ARTICLES count=' + (j.articles || []).length + ' needed=' + j.needed);
+return [$input.first()];
+"""
+
+LOG_MERGE_STATS = r"""const items = $input.all();
+console.log('MERGE_SCHEDULE items=' + items.length);
+if (items.length === 0) {
+  throw new Error('No articles to post — check NewsAPI filters or run flush-cache');
+}
+return items;
 """
 
 
@@ -1246,7 +1279,7 @@ N["fetchPoliticsNews"] = add_node(node(
         **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+    onError="continueRegularOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
 ))
 N["fetchCelebritiesNews"] = add_node(node(
     "fetchCelebritiesNews", "n8n-nodes-base.httpRequest", [X(5), Y0],
@@ -1263,13 +1296,14 @@ N["fetchCelebritiesNews"] = add_node(node(
         **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+    onError="continueRegularOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
 ))
 N["mergeNewsFeeds"] = add_node(node("mergeNewsFeeds", "n8n-nodes-base.code", [X(6), Y0], {"jsCode": MERGE_NEWS_FEEDS}, typeVersion=2))
 N["tagCategory"] = add_node(node("tagCategory", "n8n-nodes-base.code", [X(7), Y0], {
     "jsCode": "return [{ json: { ...$input.first().json, _category: 'politics+celebrities' } }];"
 }, typeVersion=2))
 N["filterArticles"] = add_node(node("filterArticles", "n8n-nodes-base.code", [X(8), Y0], {"jsCode": FILTER_ARTICLES}, typeVersion=2))
+N["logFilterStats"] = add_node(node("logFilterStats", "n8n-nodes-base.code", [X(8), Y0 + 60], {"jsCode": LOG_FILTER_STATS}, typeVersion=2))
 N["checkNeedsFallback"] = add_node(node(
     "checkNeedsFallback", "n8n-nodes-base.if", [X(7), Y0],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -1292,13 +1326,14 @@ N["fetchFallbackNews"] = add_node(node(
         **NEWSAPI_HEADERS,
     },
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
-    onError="continueErrorOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
+    onError="continueRegularOutput", retryOnFail=True, maxTries=3, waitBetweenTries=2000,
 ))
 N["fillRemainingSlots"] = add_node(node("fillRemainingSlots", "n8n-nodes-base.code", [X(9), Y0], {"jsCode": FILL_REMAINING_SLOTS}, typeVersion=2))
 N["passthroughNoFallback"] = add_node(node("passthroughNoFallback", "n8n-nodes-base.code", [X(8), Y0 + 100], {
     "jsCode": "return $('filterArticles').first().json.articles.map((a,i)=>({json:{...a,articleIndex:i+1}}));"
 }, typeVersion=2))
 N["mergeScheduleWithArticles"] = add_node(node("mergeScheduleWithArticles", "n8n-nodes-base.code", [X(10), Y1], {"jsCode": MERGE_SCHEDULE_ARTICLES}, typeVersion=2))
+N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10), Y1 + 80], {"jsCode": LOG_MERGE_STATS}, typeVersion=2))
 
 # === LOOP ===
 N["splitInBatches"] = add_node(node(
@@ -1815,13 +1850,15 @@ wire("fetchPoliticsNews", "fetchCelebritiesNews")
 wire("fetchCelebritiesNews", "mergeNewsFeeds")
 wire("mergeNewsFeeds", "tagCategory")
 wire("tagCategory", "filterArticles")
-wire("filterArticles", "checkNeedsFallback")
+wire("filterArticles", "logFilterStats")
+wire("logFilterStats", "checkNeedsFallback")
 wire("checkNeedsFallback", "fetchFallbackNews", 0)  # true = needs fallback
 wire("checkNeedsFallback", "passthroughNoFallback", 1)  # false
 wire("fetchFallbackNews", "fillRemainingSlots", 0)
 wire("fillRemainingSlots", "mergeScheduleWithArticles")
 wire("passthroughNoFallback", "mergeScheduleWithArticles")
-wire("mergeScheduleWithArticles", "splitInBatches")
+wire("mergeScheduleWithArticles", "logMergeStats")
+wire("logMergeStats", "splitInBatches")
 
 wire("splitInBatches", "prepareSlotWait", 0)  # current batch output
 wire("prepareSlotWait", "checkHalted")

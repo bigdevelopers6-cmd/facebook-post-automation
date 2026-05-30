@@ -120,8 +120,20 @@ except Exception:
 done
 
 echo ""
-echo "Full node list:"
-chmod +x scripts/diagnose-execution.sh 2>/dev/null || true
-if [ -x scripts/diagnose-execution.sh ] && [ -n "$EXEC_ID" ]; then
-  ./scripts/diagnose-execution.sh "$EXEC_ID" 2>/dev/null | tail -n +3 || true
+echo "=== Nodes in execution $EXEC_ID ==="
+if [ -n "$EXEC_ID" ] && [ -f /tmp/exec.json ]; then
+  python3 << PY
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path("scripts").resolve()))
+from n8n_exec_parse import parse_execution, format_node_list
+import json
+root = json.load(open("/tmp/exec.json"))
+run, last, status, _ = parse_execution(root)
+print("Status:", status, "| Last:", last, "| Count:", len(run))
+print(format_node_list(run))
+PY
 fi
+echo ""
+echo "=== Docker pipeline hints (last 3 min) ==="
+docker logs facebook-news-n8n --since 3m 2>&1 | grep -iE 'FILTER_ARTICLES|MERGE_NEWS|MERGE_SCHEDULE|No articles|executing node' | tail -12 || echo "(none — run on server with docker)"

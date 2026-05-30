@@ -4,6 +4,8 @@ import json
 import sys
 from pathlib import Path
 
+from n8n_exec_parse import parse_execution
+
 # Logical steps shown in console (order matters)
 PIPELINE = [
     ("trigger", "1. Trigger & setup", [
@@ -15,8 +17,8 @@ PIPELINE = [
     ]),
     ("news", "3. Fetch & filter US news", [
         "prepareCategory", "fetchPoliticsNews", "fetchCelebritiesNews", "mergeNewsFeeds",
-        "tagCategory", "filterArticles", "checkNeedsFallback", "fetchFallbackNews",
-        "fillRemainingSlots", "passthroughNoFallback", "mergeScheduleWithArticles",
+        "tagCategory", "filterArticles", "logFilterStats", "checkNeedsFallback", "fetchFallbackNews",
+        "fillRemainingSlots", "passthroughNoFallback", "mergeScheduleWithArticles", "logMergeStats",
     ]),
     ("slot", "4. Posting slot & wait", [
         "splitInBatches", "prepareSlotWait", "checkHalted", "waitForSlot",
@@ -53,22 +55,8 @@ SKIP_NODES = {
 
 
 def extract_run_data(root):
-    data = root.get("data", root)
-    if isinstance(data, str):
-        data = json.loads(data)
-    inner = data.get("data")
-    if isinstance(inner, str):
-        inner = json.loads(inner)
-    rd = {}
-    if isinstance(inner, dict):
-        rd = inner.get("resultData") or inner
-    elif isinstance(data.get("resultData"), dict):
-        rd = data["resultData"]
-    run = rd.get("runData", {}) if isinstance(rd, dict) else {}
-    last = rd.get("lastNodeExecuted") if isinstance(rd, dict) else None
-    status = data.get("status") if isinstance(data, dict) else root.get("status")
-    exec_status = status or root.get("status")
-    return run if isinstance(run, dict) else {}, last, exec_status, data
+    run, last, exec_status, data = parse_execution(root)
+    return run, last, exec_status, data
 
 
 def node_status(run, node_name):
