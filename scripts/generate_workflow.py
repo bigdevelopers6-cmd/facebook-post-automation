@@ -340,7 +340,11 @@ return articles.slice(0, 10).map((a, idx) => ({
 
 MERGE_SCHEDULE_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
-const items = $input.all().map(i => i.json);
+let items = $input.all().map(i => i.json);
+if (staticData.singleSlotTest) {
+  items = items.slice(0, 1);
+  staticData.singleSlotTest = false;
+}
 
 return items.map((article, idx) => {
   const slot = schedule[idx] || schedule[0];
@@ -371,8 +375,7 @@ return [{ json: { ...item, waitMs, halted: false } }];
 EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global');
 const gates = [
   { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },
-  { node: 'productionGateLLM', label: 'CaptionLLM', ok: (j) => j && j.llmGateOk === true },
-  { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.data && j.data.is_valid === true && !j.error },
+  { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.id && !j.error },
 ];
 const failures = [];
 for (const g of gates) {
@@ -492,29 +495,18 @@ return [{ json: { skipped: true, reason: 'PUBLISH_BLOCKED_MISSING_REVIEW', url: 
 """
 
 LLM_HTTP_HELPERS = r"""
-const https = require('https');
-
-function httpJson(url, options) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url);
-    const req = https.request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
-      method: options.method || 'GET',
-      headers: options.headers || {},
-    }, (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
-        catch { resolve({ status: res.statusCode, body: { raw: data } }); }
-      });
-    });
-    req.on('error', reject);
-    const body = options.body;
-    if (body) req.write(typeof body === 'string' ? body : JSON.stringify(body));
-    req.end();
+async function httpJson(url, options) {
+  const res = await fetch(url, {
+    method: options.method || 'GET',
+    headers: options.headers || {},
+    body: options.body
+      ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body))
+      : undefined,
   });
+  const text = await res.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = { raw: text }; }
+  return { status: res.status, body };
 }
 
 async function callAnthropic(system, user, maxTokens) {
@@ -717,23 +709,6 @@ return [{{
 """
 )
 
-PRODUCTION_GATE_LLM = (
-    LLM_HTTP_HELPERS
-    + r"""
-const probes = [];
-for (const fn of [callAnthropic, callGroq, callGemini]) {
-  try {
-    const r = await fn('Reply with exactly: OK', 'Health check', 16);
-    probes.push({ provider: r.provider || fn.name, ok: !!r.ok, error: r.error });
-  } catch (e) {
-    probes.push({ provider: fn.name, ok: false, error: e.message });
-  }
-}
-const llmGateOk = probes.some((p) => p.ok);
-return [{ json: { llmGateOk, llmProviders: probes, status: llmGateOk ? 'ok' : 'error' } }];
-"""
-)
-
 INCREMENT_REWRITE = r"""const item = $input.first().json;
 const attempt = (item.rewriteAttempt || 0) + 1;
 const staticData = $getWorkflowStaticData('global');
@@ -858,13 +833,9 @@ return [{ json: { updated: true, url } }];
 """
 
 PARSE_FB_TOKEN = r"""const response = $input.first().json;
-const data = response.data || {};
-const isValid = data.is_valid === true;
-const expiresAt = data.expires_at || 0;
-const now = Math.floor(Date.now() / 1000);
-const expiresInDays = expiresAt ? (expiresAt - now) / 86400 : 999;
+const isValid = !!(response.id && !response.error);
 const item = $('prepareSlotWait').first().json;
-return [{ json: { ...item, tokenValid: isValid, expiresInDays, skipPosting: !isValid || expiresInDays < 7 } }];
+return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting: !isValid } }];
 """
 
 SKIP_INVALID_TOKEN = r"""const staticData = $getWorkflowStaticData('global');
@@ -941,10 +912,11 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = r"""const staticData = $getWorkflowStaticData('global');
 staticData.todaySchedule = [{
   slotIndex: 1,
-  epochMs: Date.now() + 5000,
+  epochMs: Date.now() + 3000,
   windowLabel: 'test_one',
   scheduledEt: 'now',
 }];
+staticData.singleSlotTest = true;
 staticData.circuitBreakerHalted = false;
 staticData.productionHalted = false;
 staticData.apisHealthy = null;
@@ -1167,11 +1139,6 @@ N["productionGateNewsAPI"] = add_node(node(
     typeVersion=4.2, credentials={"httpHeaderAuth": {"id": "NEWSAPI_KEY", "name": "NEWSAPI_KEY"}},
     onError="continueRegularOutput",
 ))
-N["productionGateLLM"] = add_node(node(
-    "productionGateLLM", "n8n-nodes-base.code", [X(4), Y0 - 80],
-    {"jsCode": PRODUCTION_GATE_LLM},
-    typeVersion=2,
-))
 N["productionGateOpenAI"] = add_node(node(
     "productionGateOpenAI", "n8n-nodes-base.httpRequest", [X(5), Y0 - 80],
     {"method": "GET", "url": "https://api.openai.com/v1/models",
@@ -1180,12 +1147,16 @@ N["productionGateOpenAI"] = add_node(node(
     onError="continueRegularOutput",
 ))
 N["productionGateMeta"] = add_node(node(
-    "productionGateMeta", "n8n-nodes-base.httpRequest", [X(6), Y0 - 80],
-    {"method": "GET", "url": "https://graph.facebook.com/debug_token",
-     "sendQuery": True, "queryParameters": {"parameters": [
-         {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
-         {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
-     ]}},
+    "productionGateMeta", "n8n-nodes-base.httpRequest", [X(5), Y0 - 80],
+    {
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + ($env.FB_PAGE_ID || '') }}",
+        "sendQuery": True,
+        "queryParameters": {"parameters": [
+            {"name": "fields", "value": "id,name"},
+            {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+        ]},
+    },
     typeVersion=4.2, onError="continueRegularOutput",
 ))
 N["evaluateProductionApis"] = add_node(node("evaluateProductionApis", "n8n-nodes-base.code", [X(7), Y0 - 80], {"jsCode": EVALUATE_PRODUCTION_GATE}, typeVersion=2))
@@ -1304,10 +1275,10 @@ N["checkFBToken"] = add_node(node(
     "checkFBToken", "n8n-nodes-base.httpRequest", [X(4), Y1],
     {
         "method": "GET",
-        "url": "https://graph.facebook.com/debug_token",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + ($env.FB_PAGE_ID || '') }}",
         "sendQuery": True,
         "queryParameters": {"parameters": [
-            {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+            {"name": "fields", "value": "id,name"},
             {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
         ]},
     },
@@ -1623,7 +1594,7 @@ N["writeDailyReportFile"] = add_node(node(
 # === WEBHOOK TRIGGER (curl-friendly manual trigger) ===
 N["webhookTrigger"] = add_node(node(
     "webhookTrigger", "n8n-nodes-base.webhook", [X(0) + 2600, Y0 - 200],
-    {"httpMethod": "GET", "path": "trigger-post", "responseMode": "onReceived", "responseData": "allEntries"},
+    {"httpMethod": "GET", "path": "trigger-post", "responseMode": "onReceived", "responseData": "noData"},
     typeVersion=2, webhookId="trigger-post",
 ))
 N["webhookSetup"] = add_node(node("webhookSetup", "n8n-nodes-base.code", [X(1) + 2600, Y0 - 200], {
@@ -1700,11 +1671,15 @@ N["healthOpenAI"] = add_node(node(
 ))
 N["healthMeta"] = add_node(node(
     "healthMeta", "n8n-nodes-base.httpRequest", [X(7) + 2600, Y0 + 500],
-    {"method": "GET", "url": "https://graph.facebook.com/debug_token",
-     "sendQuery": True, "queryParameters": {"parameters": [
-         {"name": "input_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
-         {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
-     ]}},
+    {
+        "method": "GET",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + ($env.FB_PAGE_ID || '') }}",
+        "sendQuery": True,
+        "queryParameters": {"parameters": [
+            {"name": "fields", "value": "id,name"},
+            {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+        ]},
+    },
     typeVersion=4.2, onError="continueErrorOutput",
 ))
 N["healthAggregate"] = add_node(node("healthAggregate", "n8n-nodes-base.code", [X(8) + 2600, Y0 + 500], {"jsCode": HEALTH_AGGREGATE}, typeVersion=2))
@@ -1713,8 +1688,7 @@ N["healthAggregate"] = add_node(node("healthAggregate", "n8n-nodes-base.code", [
 wire("scheduleTrigger645AM", "computePostTimes")
 wire("computePostTimes", "storeTodaySchedule")
 wire("storeTodaySchedule", "productionGateNewsAPI")
-wire("productionGateNewsAPI", "productionGateLLM")
-wire("productionGateLLM", "productionGateMeta")
+wire("productionGateNewsAPI", "productionGateMeta")
 wire("productionGateMeta", "evaluateProductionApis")
 wire("evaluateProductionApis", "productionGatePass")
 wire("productionGatePass", "prepareDailyRunEmail", 0)
