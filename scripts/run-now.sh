@@ -153,28 +153,33 @@ python3 << PY
 import json, re, sys
 from pathlib import Path
 sys.path.insert(0, str(Path("scripts").resolve()))
-from n8n_exec_parse import extract_execution_error, runtime_publish_ok
+from n8n_exec_parse import extract_execution_error, runtime_publish_ok, extract_publish_post_id, read_pipeline_log
 try:
     root = json.load(open("/tmp/exec.json"))
     raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
+    log_text = read_pipeline_log()
     errs = extract_execution_error(root, raw)
     text = " ".join(errs)
-    if "WEBHOOK_TEST_NO_POST_" in text or "WEBHOOK_TEST_NO_POST_" in raw:
-        print("\n[!!] NO POST — read 'data.error' / Trace above")
+    post_id = extract_publish_post_id(log_text) or extract_publish_post_id(raw)
+    status = (root.get("data") or {}).get("status") or "${STATUS}"
+    if post_id or runtime_publish_ok(raw):
+        print("\n[OK]  POST SUCCEEDED — Facebook post id:", post_id or "(see pipeline.log)")
+        print("     Page: https://www.facebook.com/${FB_PAGE}")
+    elif status == "success" and log_text:
+        print("\n[OK]  Workflow succeeded — see data/reports/pipeline.log for trace")
+    elif status == "error" and ("WEBHOOK_TEST_NO_POST_" in text or "WEBHOOK_TEST_NO_POST_" in raw) and not runtime_publish_ok(raw):
+        print("\n[!!] NO POST — read pipeline.log / Trace above")
         if "ROUTE_FAILED" in text or "NO_WEBHOOK_SLOT_FAST" in text:
             print("    Likely fix: bash scripts/server-deploy.sh (need v9 webhookSlotFast)")
         elif "NO_WEBHOOK_PREPARE" in text or "NO_TOKEN_CHECK" in text:
             print("    Likely fix: v9 deploy + valid FB_ACCESS_TOKEN in .env")
-        elif "pages_manage_posts" in text or "pages_read_engagement" in text or "PUBLISH_FAIL" in raw and "403" in raw:
+        elif "pages_manage_posts" in text or "pages_read_engagement" in text or ("PUBLISH_FAIL" in log_text and "403" in log_text):
             print("    Fix: Page token missing publish permissions.")
             print("    Run: bash scripts/check-fb-token.sh")
-            print("    Regenerate System User token with pages_manage_posts + pages_read_engagement")
         elif "SKIP_TOKEN_INVALID" in text or "TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
             print("    Likely fix: renew FB_ACCESS_TOKEN in .env, then docker compose up -d")
         elif "BLOCKED_PUBLISH" in text:
             print("    Likely fix: caption/LLM keys (ANTHROPIC/GROQ/GEMINI) or image gate")
-    elif runtime_publish_ok(raw):
-        print("\n[OK]  POST SUCCEEDED (PUBLISH_OK postId= in execution)")
     elif "${STATUS}" == "error":
         print("\n[!!] Execution ERROR — see data.error in report above")
     elif int("${ELAPSED:-99}") < 8:

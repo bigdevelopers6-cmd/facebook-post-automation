@@ -4,7 +4,7 @@ import json
 import sys
 from pathlib import Path
 
-from n8n_exec_parse import parse_execution
+from n8n_exec_parse import parse_execution, read_pipeline_log, extract_publish_post_id
 
 # Logical steps shown in console (order matters)
 PIPELINE = [
@@ -71,6 +71,8 @@ RAW_TRACE_MARKERS = [
     ("SKIP_HALTED:", "slot", "skipped"),
     ("BLOCKED_PUBLISH:", "image", "skipped"),
     ("webhookEnsurePublish:", "image", "done"),
+    ("PUBLISH_OK postId=", "publish", "done"),
+    ("gatePublishFeed:", "publish", "done"),
     ("LOOP_EMPTY", "slot", "failed"),
 ]
 
@@ -183,20 +185,32 @@ def render_progress(run, last_node, exec_status, elapsed_s=None):
 
 
 def infer_from_raw(raw: str, exec_status: str | None) -> dict[str, tuple[str, str | None]]:
-    """Step key -> (state, detail) from pipelineLog strings in execution blob."""
+    """Step key -> (state, detail) from pipeline.log (preferred) or execution blob."""
     import re
 
     states: dict[str, tuple[str, str | None]] = {}
-    runtime = []
-    for m in re.finditer(
-        r'(?:BUILD=|prepareCategory|mergeNewsFeeds|filterArticles|logMergeStats|prepareSlotWait|parseFBToken|SKIP_|BLOCKED_|webhookEnsure|PUBLISH_OK|WEBHOOK_TEST)[^"\\]{8,120}',
-        raw,
-    ):
-        t = m.group(0).replace("\\n", " ")
-        if "const __sd" in t or "return [{ json" in t:
-            continue
-        runtime.append(t)
-    blob = " | ".join(runtime)
+    log_text = read_pipeline_log()
+    blob = log_text if log_text.strip() else ""
+
+    if not blob:
+        runtime = []
+        for m in re.finditer(
+            r'(?:BUILD=|prepareCategory|mergeNewsFeeds|filterArticles|logMergeStats|'
+            r'webhookDirectToSlot|webhookSlotFast|parseFBToken|webhookPreparePublish|'
+            r'gatePublishFeed|PUBLISH_OK postId=|PUBLISH_FAIL:)[^"\\]{8,200}',
+            raw,
+        ):
+            t = m.group(0).replace("\\n", " ")
+            if "const __sd" in t or "return [{ json" in t or "__trace(" in t:
+                continue
+            runtime.append(t)
+        plog = re.search(r'"pipelineLog"\s*:\s*\[(.*?)\]', raw, re.S)
+        if plog:
+            for e in re.findall(r'"([^"]{15,250})"', plog.group(1)):
+                if "const __sd" not in e and "return [{ json" not in e and len(e) < 220:
+                    runtime.append(e)
+        blob = " | ".join(runtime)
+
     if not blob:
         return states
 
@@ -205,10 +219,13 @@ def infer_from_raw(raw: str, exec_status: str | None) -> dict[str, tuple[str, st
         if marker in blob:
             states[step_key] = (default_state, marker[:60])
 
-    if re.search(r"PUBLISH_OK postId=\d{6,}", blob):
-        states["publish"] = ("done", "PUBLISH_OK")
+    post_id = extract_publish_post_id(blob)
+    if post_id:
+        states["publish"] = ("done", f"PUBLISH_OK {post_id}")
         states["finish"] = ("done", "published")
-    elif exec_status == "error" and "WEBHOOK_TEST_NO_POST" in blob:
+        states["slot"] = ("done", "webhookSlotFast")
+        states["token"] = ("done", "parseFBToken")
+    elif exec_status == "error" and "WEBHOOK_TEST_NO_POST" in blob and "PUBLISH_OK postId=" not in blob:
         states["finish"] = ("failed", "WEBHOOK_TEST_NO_POST")
 
     # Mark pending steps after last known

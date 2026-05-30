@@ -74,10 +74,41 @@ def parse_execution(root: dict) -> Tuple[dict, Optional[str], Optional[str], dic
     return (run if isinstance(run, dict) else {}), last, status, data
 
 
-def runtime_publish_ok(raw_text: str) -> bool:
-    """True only when execution data shows a real post id, not workflow jsCode."""
+_PUBLISH_OK_RE = r"PUBLISH_OK postId=[0-9]{8,}(?:_[0-9]+)?"
+
+
+def read_pipeline_log(path: str = "data/reports/pipeline.log") -> str:
+    from pathlib import Path
+
+    p = Path(path)
+    if p.is_file():
+        return p.read_text(encoding="utf-8", errors="replace")
+    return ""
+
+
+def extract_publish_post_id(text: str) -> str | None:
     import re
-    return bool(re.search(r"PUBLISH_OK postId=\d{8,}", raw_text))
+
+    m = re.search(_PUBLISH_OK_RE, text)
+    return m.group(0).split("=", 1)[1] if m else None
+
+
+def runtime_publish_ok(raw_text: str = "", *, log_path: str = "data/reports/pipeline.log") -> bool:
+    """True when pipeline.log or execution trace has a real PUBLISH_OK postId."""
+    import re
+
+    combined = (read_pipeline_log(log_path) or "") + "\n" + (raw_text or "")
+    return bool(re.search(_PUBLISH_OK_RE, combined))
+
+
+def runtime_publish_failed(raw_text: str = "", *, log_path: str = "data/reports/pipeline.log") -> bool:
+    """True only when trace shows publish failed and no successful post id."""
+    if runtime_publish_ok(raw_text, log_path=log_path):
+        return False
+    log = read_pipeline_log(log_path)
+    if "PUBLISH_FAIL:" in log and "PUBLISH_OK postId=" not in log:
+        return True
+    return "PUBLISH_FAIL:" in (raw_text or "") and not runtime_publish_ok(raw_text, log_path=log_path)
 
 
 def deep_find_key(obj: Any, key: str, depth: int = 0) -> list[Any]:

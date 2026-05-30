@@ -31,7 +31,10 @@ import json, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path("scripts").resolve()))
-from n8n_exec_parse import extract_execution_error, parse_execution, scan_raw_execution, runtime_publish_ok
+from n8n_exec_parse import (
+    extract_execution_error, parse_execution, scan_raw_execution,
+    runtime_publish_ok, extract_publish_post_id, read_pipeline_log,
+)
 
 root = json.load(open("/tmp/exec.json"))
 raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
@@ -58,11 +61,13 @@ if hints.get("pipeline_lines"):
     print("\n[PIPELINE] in execution blob:")
     for ln in hints["pipeline_lines"][-12:]:
         print(" ", ln[:200])
-if "WEBHOOK_TEST_NO_POST" in raw:
+log_text = read_pipeline_log()
+post_id = extract_publish_post_id(log_text) or extract_publish_post_id(raw)
+if post_id or runtime_publish_ok(raw):
+    print("\n[OK] Facebook post published — post id:", post_id or "(see pipeline.log)")
+elif "WEBHOOK_TEST_NO_POST" in raw and data.get("status") == "error":
     print("\n[!!] WEBHOOK_TEST_NO_POST — loop finished without Facebook publish")
-    print("    (PUBLISH_OK in blob below is often workflow JSON — ignore unless postId= digits)")
-if runtime_publish_ok(raw):
-    print("\n[OK] Real publish: PUBLISH_OK postId=<numeric> in execution data")
+    print("    Check data/reports/pipeline.log for the real trace")
 PY
 
 echo ""
