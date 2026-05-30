@@ -30,6 +30,8 @@ services:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
       - NODE_FUNCTION_ALLOW_EXTERNAL=luxon
       - NODE_FUNCTION_ALLOW_BUILTIN=*
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console
     volumes:
       - n8n_data:/home/node/.n8n
       - ./data/reports:/data/reports

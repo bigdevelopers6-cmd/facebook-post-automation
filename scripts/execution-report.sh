@@ -22,6 +22,11 @@ echo " Execution report — ID $EXEC_ID"
 echo "=============================================="
 
 echo ""
+if [ -x scripts/get-execution-error.sh ]; then
+  bash scripts/get-execution-error.sh "$EXEC_ID"
+  echo ""
+fi
+
 echo "=== 1. Pipeline trace (staticData — saved in execution JSON) ==="
 curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
   -H "Content-Type: application/json" \

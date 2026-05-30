@@ -8,12 +8,17 @@ def nid():
     return str(uuid.uuid4())
 
 def node(name, ntype, position, parameters=None, **kwargs):
+    params = dict(parameters or {})
+    tv = kwargs.get("typeVersion", 1)
+    if ntype == "n8n-nodes-base.code" and tv == 2:
+        params.setdefault("language", "javaScript")
+        params.setdefault("mode", "runOnceForAllItems")
     n = {
-        "parameters": parameters or {},
+        "parameters": params,
         "id": nid(),
         "name": name,
         "type": ntype,
-        "typeVersion": kwargs.get("typeVersion", 1),
+        "typeVersion": tv,
         "position": position,
     }
     if "credentials" in kwargs:
@@ -97,35 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v5"
-
-PIPELINE_LOG_FN = r"""
-function pipelineLog(msg) {
-  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';
-  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;
-  console.log('[PIPELINE] ' + line);
-  const sd = $getWorkflowStaticData('global');
-  sd.pipelineLog = sd.pipelineLog || [];
-  sd.pipelineLog.push(line);
-  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);
-}
-"""
-
-
-def with_pipeline_log(code: str, node_label: str = "code") -> str:
-    body = code.strip()
-    if "__fatalCodeError" in body and "try {" in body:
-        return body
-    return (
-        PIPELINE_LOG_FN
-        + "\ntry {\n"
-        + body
-        + "\n} catch (fatal) {\n"
-        + "  pipelineLog('FATAL [" + node_label + "]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n"
-        + "  return [{ json: { __fatalCodeError: true, node: '" + node_label + "', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n"
-        + "}\n"
-    )
-
+WORKFLOW_BUILD = "2026-05-30-trace-v6-fix"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -232,7 +209,7 @@ staticData.todaySchedule = schedule;
 return [{ json: { stored: true, slotCount: schedule.length } }];
 """
 
-FILTER_ARTICLES = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+FILTER_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
@@ -307,7 +284,9 @@ const output = mixed.map(a => ({
   isRepost: false,
 }));
 
-pipelineLog('FILTER primary=' + primary.length + ' output=' + output.length + ' needed=' + (10 - output.length) + ' testMode=' + testMode);
+const __sdF=$getWorkflowStaticData('global');
+(__sdF.pipelineLog=__sdF.pipelineLog||[]).push('filterArticles: primary='+primary.length+' output='+output.length);
+console.log('[PIPELINE] filterArticles', primary.length, output.length);
 if (output.length === 0) {
   throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);
 }
@@ -319,9 +298,9 @@ return [{
     category: 'politics+celebrities',
   }
 }];
-""")
+"""
 
-FILL_REMAINING_SLOTS = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+FILL_REMAINING_SLOTS = r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
@@ -386,17 +365,19 @@ if (articles.length < 10) {
 if (articles.length === 0) {
   throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or flush-cache.');
 }
-pipelineLog('FILL finalCount=' + articles.length);
-
+const __sdFill=$getWorkflowStaticData('global');
+(__sdFill.pipelineLog=__sdFill.pipelineLog||[]).push('fillRemainingSlots: count='+articles.length);
 return articles.slice(0, 10).map((a, idx) => ({
   json: { ...a, articleIndex: idx + 1 }
 }));
-""")
+"""
 
-MERGE_SCHEDULE_ARTICLES = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+MERGE_SCHEDULE_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
 let items = $input.all().map(i => i.json);
-pipelineLog('MERGE_SCHEDULE inputItems=' + items.length);
+const __sdM=$getWorkflowStaticData('global');
+(__sdM.pipelineLog=__sdM.pipelineLog||[]).push('mergeSchedule: items='+items.length);
+console.log('[PIPELINE] mergeSchedule items='+items.length);
 if (items.length === 0) {
   throw new Error('MERGE_SCHEDULE: No articles to post — NewsAPI empty or all URLs in posted cache. Run flush-cache.');
 }
@@ -417,29 +398,33 @@ return items.map((article, idx) => {
     }
   };
 });
-""")
+"""
 
-PREPARE_SLOT_WAIT = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+PREPARE_SLOT_WAIT = r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
 if (staticData.forcePostTest) {
   staticData.forcePostTest = false;
-  pipelineLog('SLOT forcePostTest — post immediately');
+  const __sdS=$getWorkflowStaticData('global');
+  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: forcePostTest');
   return [{ json: { ...item, waitMs: 0, halted: false } }];
 }
 if (staticData.productionHalted) {
-  pipelineLog('SLOT SKIP productionHalted=true');
+  const __sdS=$getWorkflowStaticData('global');
+  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP productionHalted');
   return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];
 }
 if (staticData.circuitBreakerHalted) {
-  pipelineLog('SLOT SKIP circuitBreakerHalted=true');
+  const __sdS=$getWorkflowStaticData('global');
+  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP circuitBreaker');
   return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
 }
 const waitMs = Math.max(0, item.epochMs - Date.now());
-  pipelineLog('SLOT waitMs=' + waitMs + ' title=' + (item.title || '').slice(0, 60));
+const __sdS=$getWorkflowStaticData('global');
+(__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: waitMs='+waitMs);
 return [{ json: { ...item, waitMs, halted: false } }];
-""")
+"""
 
-EVALUATE_PRODUCTION_GATE = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global');
 const gates = [
   { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },
   { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.id && !j.error },
@@ -468,7 +453,9 @@ if (!allApisHealthy) {
   staticData.productionHalted = false;
   staticData.circuitBreakerHalted = false;
 }
-pipelineLog('GATE healthy=' + allApisHealthy + ' failures=' + failures.length + ' ' + (failures.map(function(f) { return f.api; }).join(',') || 'none'));
+const __sdG=$getWorkflowStaticData('global');
+(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('evaluateProductionApis: healthy='+allApisHealthy+' failures='+failures.length);
+console.log('[PIPELINE] GATE', allApisHealthy, failures);
 return [{
   json: {
     allApisHealthy,
@@ -477,9 +464,9 @@ return [{
     haltReason: allApisHealthy ? null : 'PRODUCTION_COST_GUARD',
   }
 }];
-""")
+"""
 
-HALT_PRODUCTION = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+HALT_PRODUCTION = r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
 staticData.productionHalted = true;
 staticData.circuitBreakerHalted = true;
@@ -493,7 +480,8 @@ staticData.errorLog.push({
   error_message: staticData.productionHaltReason,
   article_url: 'n/a',
 });
-pipelineLog('HALT production stopped: ' + (staticData.productionHaltReason || 'unknown'));
+const __sdH=$getWorkflowStaticData('global');
+(__sdH.pipelineLog=__sdH.pipelineLog||[]).push('haltProduction: '+staticData.productionHaltReason);
 return [{
   json: {
     halted: true,
@@ -503,7 +491,7 @@ return [{
     pipelineTrace: (staticData.pipelineLog || []).slice(-25),
   }
 }];
-""")
+"""
 
 MARK_CAPTION_REVIEW_PASSED = r"""const item = $input.first().json;
 if (!item.review || item.review.approved !== true || item.review.risk_level === 'high') {
@@ -873,14 +861,16 @@ return [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageS
 """
 
 
-HANDLE_PUBLISH_SUCCESS = with_pipeline_log(r"""const response = $input.first().json;
+HANDLE_PUBLISH_SUCCESS = r"""const response = $input.first().json;
 const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;
 const postId = response.id || response.post_id || '';
-pipelineLog('PUBLISH_OK postId=' + postId + ' title=' + (item.title || '').slice(0, 50));
+const __sdP=$getWorkflowStaticData('global');
+(__sdP.pipelineLog=__sdP.pipelineLog||[]).push('PUBLISH_OK postId='+postId);
+console.log('[PIPELINE] PUBLISH_OK', postId);
 return [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];
-""")
+"""
 
-HANDLE_PUBLISH_ERROR = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
+HANDLE_PUBLISH_ERROR = r"""const staticData = $getWorkflowStaticData('global');
 staticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;
 staticData.errorLog = staticData.errorLog || [];
 let ctx = {};
@@ -897,9 +887,10 @@ if (staticData.consecutiveFailures > 4) {
   staticData.circuitBreakerHalted = true;
 }
 if (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);
-pipelineLog('PUBLISH_FAIL ' + (err.error?.message || JSON.stringify(err)).slice(0, 200));
+const __sdPf=$getWorkflowStaticData('global');
+(__sdPf.pipelineLog=__sdPf.pipelineLog||[]).push('PUBLISH_FAIL');
 return [{ json: { ...ctx, ...err, publishSuccess: false, consecutiveFailures: staticData.consecutiveFailures } }];
-""")
+"""
 
 PARSE_POST_AUDIT = r"""const raw = $input.first().json.content?.[0]?.text || '{}';
 let audit;
@@ -971,18 +962,17 @@ staticData.errorLog.push({
 return [{ json: { skipped: true, reason: 'TOKEN_INVALID' } }];
 """
 
-SKIP_HALTED = with_pipeline_log(r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
-pipelineLog('SKIP_HALTED reason=' + reason);
+SKIP_HALTED = r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
+const __sdSk=$getWorkflowStaticData('global');
+(__sdSk.pipelineLog=__sdSk.pipelineLog||[]).push('SKIP_HALTED: '+reason);
 return [{ json: { skipped: true, reason } }];
-""")
+"""
 
-PIPELINE_SUMMARY = with_pipeline_log(
-    rf"""const sd = $getWorkflowStaticData('global');
+PIPELINE_SUMMARY = rf"""const sd = $getWorkflowStaticData('global');
 const lines = sd.pipelineLog || [];
-pipelineLog('SUMMARY complete build={WORKFLOW_BUILD}');
+(sd.pipelineLog=sd.pipelineLog||[]).push('pipelineSummary: build={WORKFLOW_BUILD}');
 return [{{ json: {{ build: '{WORKFLOW_BUILD}', trace: lines.slice(-30) }} }}];
 """
-)
 
 DAILY_SUMMARY = r"""const { DateTime } = require('luxon');
 const staticData = $getWorkflowStaticData('global');
@@ -1039,10 +1029,8 @@ staticData.lastApiGateFailures = [];
 return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 """
 
-AUTO_TEST_ONE = with_pipeline_log(
-    rf"""const staticData = $getWorkflowStaticData('global');
-staticData.pipelineLog = [];
-pipelineLog('BUILD={WORKFLOW_BUILD} webhook test-one started (gate bypassed)');
+AUTO_TEST_ONE = rf"""const staticData = $getWorkflowStaticData('global');
+staticData.pipelineLog = ['BUILD={WORKFLOW_BUILD} webhookSetup'];
 staticData.webhookBypassGate = true;
 staticData.todaySchedule = [{{
   slotIndex: 1,
@@ -1056,9 +1044,9 @@ staticData.circuitBreakerHalted = false;
 staticData.productionHalted = false;
 staticData.apisHealthy = null;
 staticData.lastApiGateFailures = [];
+console.log('[PIPELINE] webhookSetup {WORKFLOW_BUILD}');
 return [{{ json: {{ command: 'test-one', mode: 'single_slot', build: '{WORKFLOW_BUILD}' }} }}];
 """
-)
 
 AUTO_REVIEW_LOG = r"""const staticData = $getWorkflowStaticData('global');
 const log = staticData.auditLog || [];
@@ -1087,22 +1075,19 @@ return [{ json: { command: 'reset-errors', cleared: true } }];
 AUTO_HEALTH_CHECK = r"""return [{ json: { command: 'health-check', pingApis: true } }];
 """
 
-CATEGORY_PREP = with_pipeline_log(
-    r"""pipelineLog('prepareCategory — starting news fetch');
-return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];""",
-    "prepareCategory",
-)
+CATEGORY_PREP = r"""const __sdC=$getWorkflowStaticData('global');
+(__sdC.pipelineLog=__sdC.pipelineLog||[]).push('prepareCategory: start fetch');
+console.log('[PIPELINE] prepareCategory');
+return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];"""
 
-MERGE_NEWS_FEEDS = with_pipeline_log(r"""function safeArticles(nodeName) {
+MERGE_NEWS_FEEDS = r"""function safeArticles(nodeName) {
   try {
     const j = $(nodeName).first().json;
     if (j.error || (j.status && j.status !== 'ok')) {
-      pipelineLog('NEWS ' + nodeName + ' bad response: ' + JSON.stringify(j).slice(0, 200));
       return [];
     }
     return j.articles || [];
   } catch (e) {
-    pipelineLog('NEWS ' + nodeName + ' error: ' + e.message);
     return [];
   }
 }
@@ -1113,23 +1098,13 @@ let articles = [
   ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),
 ];
 if (articles.length === 0) {
-  try {
-    const gate = $('productionGateNewsAPI').first().json;
-    const fromGate = (gate.articles || []).map(a => ({ ...a, _topic: 'politics' }));
-    if (fromGate.length) {
-      pipelineLog('NEWS using productionGateNewsAPI fallback count=' + fromGate.length);
-      articles = fromGate;
-    }
-  } catch (e) {
-    pipelineLog('NEWS gate fallback failed: ' + e.message);
-  }
+  throw new Error('MERGE_NEWS_FEEDS: 0 articles — check NEWSAPI_KEY or quota.');
 }
-pipelineLog('NEWS politics=' + politics.length + ' celebrities=' + celebrities.length + ' total=' + articles.length);
-if (articles.length === 0) {
-  throw new Error('MERGE_NEWS_FEEDS: 0 articles — check NEWSAPI_KEY, User-Agent header, or quota.');
-}
+const __sdN=$getWorkflowStaticData('global');
+(__sdN.pipelineLog=__sdN.pipelineLog||[]).push('mergeNewsFeeds: politics='+politics.length+' celeb='+celebrities.length+' total='+articles.length);
+console.log('[PIPELINE] mergeNewsFeeds', politics.length, celebrities.length, articles.length);
 return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
-""")
+"""
 
 LOG_FILTER_STATS = r"""const j = $input.first().json;
 console.log('FILTER_ARTICLES count=' + (j.articles || []).length + ' needed=' + j.needed);
@@ -2068,6 +2043,16 @@ for n in nodes:
     if n["type"] == "n8n-nodes-base.httpRequest" and "credentials" in n:
         if "httpHeaderAuth" in n.get("credentials", {}):
             del n["credentials"]
+    # n8n 2.x task runners crash Code v2 in ~0.2s on this host — v1 runs in-process (worked in exec 16)
+    if n["type"] == "n8n-nodes-base.code":
+        n["typeVersion"] = 1
+        n["parameters"].pop("language", None)
+        n["parameters"].pop("mode", None)
+        js = n["parameters"].get("jsCode", "")
+        if "function pipelineLog(" in js:
+            raise RuntimeError(f"Node {n['name']} still has pipelineLog wrapper — remove it")
+        if "\n} catch (fatal)" in js:
+            raise RuntimeError(f"Node {n['name']} still has try/catch wrapper — remove it")
 
 workflow = {
     "id": "facebook-us-news-001",

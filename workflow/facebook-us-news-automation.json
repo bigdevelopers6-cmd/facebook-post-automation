@@ -8,7 +8,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "2060e50a-b21e-4030-b66c-22a908514da8",
+      "id": "5f82254f-9495-46f2-acc2-afba31f2d3bd",
       "name": "SCHEDULER SUB-SYSTEM \u2014 Daily 6:45 AM ET trigger, compute 10 post times",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -23,7 +23,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "14f5ee08-5abd-4074-87ab-ec0ba27e6c67",
+      "id": "ff6ced2e-7353-4a3f-8de9-9ecc1d0d99ca",
       "name": "NEWS FETCHER SUB-SYSTEM \u2014 NewsAPI fetch, filter, dedup, fallback",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -38,7 +38,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "973f3d4c-ecd7-4d1a-87e3-24f687b38cf0",
+      "id": "8da226ba-f181-49b8-baa4-0ac9063f2351",
       "name": "CONTENT GENERATOR SUB-SYSTEM \u2014 Claude caption + OpenAI image",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -53,7 +53,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "976483f1-151e-48ad-8014-3861eb490480",
+      "id": "33bf977d-47be-4e45-89e1-a6bc0d2038a3",
       "name": "SELF-REVIEW AGENT SUB-SYSTEM \u2014 Pre/post publish compliance",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -68,7 +68,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "b9fc7acc-1857-4b94-82b4-145885a7d354",
+      "id": "5ea30c00-af75-4b3f-8b0f-f39fd81b066c",
       "name": "PUBLISHER SUB-SYSTEM \u2014 Facebook Graph API posting",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -83,7 +83,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "e9c784c3-0987-4d71-a3e4-f0dd1bc8294e",
+      "id": "2b4b8a61-a840-4d7a-ba6e-83d977c1a7f6",
       "name": "DAILY SUMMARY \u2014 11:00 PM ET report",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -98,7 +98,7 @@
         "width": 380,
         "height": 120
       },
-      "id": "219c9810-68fe-4ac1-91db-a955a087a69a",
+      "id": "0d41bb81-c40b-40a5-b66c-aebdfaa984ac",
       "name": "/auto COMMANDS \u2014 Manual trigger control panel",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -113,7 +113,7 @@
         "width": 420,
         "height": 140
       },
-      "id": "8babc8c7-d51e-4f51-a7c4-7f7cf626e283",
+      "id": "7b21012b-1811-446d-843a-8f51b1780847",
       "name": "PRODUCTION COST GUARD \u2014 All 4 APIs must pass before any paid calls; halts + alerts to stop server",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -128,7 +128,7 @@
         "width": 420,
         "height": 140
       },
-      "id": "b1c6dd4c-a4b8-4243-8791-f024e864226f",
+      "id": "687be974-44a3-4726-a202-0d2c6c35f05c",
       "name": "MANDATORY AI REVIEW LAYERS \u2014 No Facebook post without caption review + image review + finalPublishGate",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -143,7 +143,7 @@
         "width": 400,
         "height": 120
       },
-      "id": "89ddec1e-661a-42e0-85a5-74087a8319a2",
+      "id": "228f0fa3-25d9-4f6f-a26b-61da112e755b",
       "name": "SMTP NOTIFICATIONS \u2014 All emails via SMTP_NOTIFICATIONS credential; per-post + alerts + pre-shutdown",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -164,7 +164,7 @@
         },
         "timezone": "America/New_York"
       },
-      "id": "e95d76d8-8da1-4118-98da-514a3761f0f5",
+      "id": "3f071fe4-4af3-4a38-b3a6-4040d372895a",
       "name": "scheduleTrigger645AM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -177,10 +177,10 @@
       "parameters": {
         "jsCode": "// Scheduler: compute 10 randomized ET posting times\nconst { DateTime } = require('luxon');\nconst TZ = 'America/New_York';\n\nconst windows = [\n  { label: 'morning_rush', start: 7 * 60, end: 8 * 60 + 45 },\n  { label: 'mid_morning', start: 9 * 60, end: 10 * 60 + 45 },\n  { label: 'late_morning', start: 11 * 60, end: 12 * 60 + 45 },\n  { label: 'lunch', start: 13 * 60, end: 14 * 60 + 45 },\n  { label: 'afternoon', start: 15 * 60, end: 16 * 60 + 45 },\n  { label: 'evening_commute', start: 17 * 60, end: 18 * 60 + 45 },\n  { label: 'prime_time', start: 19 * 60, end: 20 * 60 + 45 },\n  { label: 'late_evening', start: 21 * 60, end: 21 * 60 + 45 },\n];\n\nfunction randomMinuteInWindow(w) {\n  return w.start + Math.floor(Math.random() * (w.end - w.start + 1));\n}\n\nfunction applyJitter(minutes) {\n  return minutes + (Math.floor(Math.random() * 25) - 12);\n}\n\nfunction minutesToEpochMs(minutesFromMidnight, day) {\n  const hours = Math.floor(minutesFromMidnight / 60);\n  const mins = minutesFromMidnight % 60;\n  return day.set({ hour: hours, minute: mins, second: 0, millisecond: 0 }).toUTC().toMillis();\n}\n\nfunction generateSchedule() {\n  const today = DateTime.now().setZone(TZ).startOf('day');\n  const times = [];\n\n  for (const w of windows) {\n    const winIdx = windows.indexOf(w);\n    const label = w.label;\n    times.push({\n      minutes: applyJitter(randomMinuteInWindow(w)),\n      windowLabel: label,\n      windowIndex: winIdx,\n    });\n  }\n\n  for (let i = 0; i < 2; i++) {\n    const w = windows[Math.floor(Math.random() * windows.length)];\n    times.push({\n      minutes: applyJitter(randomMinuteInWindow(w)),\n      windowLabel: w.label + '_extra',\n      windowIndex: windows.indexOf(w),\n    });\n  }\n\n  let attempts = 0;\n  while (attempts < 500) {\n    times.sort((a, b) => a.minutes - b.minutes);\n    let valid = true;\n    const gaps = [];\n    for (let i = 1; i < times.length; i++) {\n      const gap = times[i].minutes - times[i - 1].minutes;\n      gaps.push(gap);\n      if (gap < 40 || gap > 90) {\n        valid = false;\n        const idx = Math.floor(Math.random() * times.length);\n        const w = windows[times[idx].windowIndex ?? Math.floor(Math.random() * windows.length)];\n        times[idx].minutes = applyJitter(randomMinuteInWindow(w));\n        times[idx].windowLabel = w.label;\n        break;\n      }\n    }\n    if (valid) {\n      const uniqueGaps = new Set(gaps);\n      if (uniqueGaps.size === gaps.length) break;\n      const idx = Math.floor(Math.random() * (times.length - 1)) + 1;\n      const w = windows[Math.floor(Math.random() * windows.length)];\n      times[idx].minutes = applyJitter(randomMinuteInWindow(w));\n    }\n    attempts++;\n  }\n\n  times.sort((a, b) => a.minutes - b.minutes);\n  return times.map((t, i) => ({\n    slotIndex: i + 1,\n    epochMs: minutesToEpochMs(t.minutes, today),\n    windowLabel: t.windowLabel,\n    scheduledEt: today.plus({ minutes: t.minutes }).toFormat('HH:mm'),\n  }));\n}\n\nconst schedule = generateSchedule();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.todaySchedule = schedule;\nstaticData.consecutiveFailures = staticData.consecutiveFailures || 0;\nstaticData.circuitBreakerHalted = false;\nstaticData.rewriteAttempts = {};\n\nreturn [{ json: { todaySchedule: schedule, slotCount: schedule.length } }];\n"
       },
-      "id": "1631c419-eb15-4111-9180-6ee0682284ea",
+      "id": "c2950f79-d42b-43eb-aaa9-634603c99da7",
       "name": "computePostTimes",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         420,
         0
@@ -190,10 +190,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst schedule = $input.first().json.todaySchedule;\nstaticData.todaySchedule = schedule;\nreturn [{ json: { stored: true, slotCount: schedule.length } }];\n"
       },
-      "id": "7f16e9a7-854d-4f80-9edb-c82cd54e3554",
+      "id": "200ee420-58c5-498e-bf84-aafd3ccb8484",
       "name": "storeTodaySchedule",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         640,
         0
@@ -217,7 +217,7 @@
           ]
         }
       },
-      "id": "6a7724ec-b65a-49a5-976a-02fca7c0eb8c",
+      "id": "a0c6315e-3447-485f-9a81-8a1e308a967a",
       "name": "productionGateNewsAPI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -241,7 +241,7 @@
           ]
         }
       },
-      "id": "a1904762-f6f5-4136-b72f-55e4573dd0d4",
+      "id": "89545cc8-fbda-49b3-ad9d-40e8c430fdf0",
       "name": "productionGateOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -269,7 +269,7 @@
           ]
         }
       },
-      "id": "844086cc-7c5e-48e0-b7fc-b7d5abb395b1",
+      "id": "d1b10882-b208-41cb-b76d-1e20e5ac7fc1",
       "name": "productionGateMeta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -281,12 +281,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst gates = [\n  { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },\n  { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.id && !j.error },\n];\nconst failures = [];\nfor (const g of gates) {\n  let healthy = false;\n  let detail = 'not_executed';\n  try {\n    const j = $(g.node).first().json;\n    healthy = g.ok(j);\n    detail = healthy ? 'ok' : JSON.stringify(j).slice(0, 300);\n  } catch (e) {\n    detail = 'node_error: ' + e.message;\n  }\n  if (!healthy) failures.push({ api: g.label, detail });\n}\nconst allApisHealthy = failures.length === 0;\nstaticData.apisHealthy = allApisHealthy;\nstaticData.lastApiGateCheck = new Date().toISOString();\nstaticData.lastApiGateFailures = failures;\nif (!allApisHealthy) {\n  staticData.productionHalted = true;\n  staticData.circuitBreakerHalted = true;\n} else {\n  staticData.productionHalted = false;\n  staticData.circuitBreakerHalted = false;\n}\npipelineLog('GATE healthy=' + allApisHealthy + ' failures=' + failures.length + ' ' + (failures.map(function(f) { return f.api; }).join(',') || 'none'));\nreturn [{\n  json: {\n    allApisHealthy,\n    failures,\n    failureSummary: failures.map(f => f.api + ': ' + f.detail).join('; '),\n    haltReason: allApisHealthy ? null : 'PRODUCTION_COST_GUARD',\n  }\n}];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst gates = [\n  { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },\n  { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.id && !j.error },\n];\nconst failures = [];\nfor (const g of gates) {\n  let healthy = false;\n  let detail = 'not_executed';\n  try {\n    const j = $(g.node).first().json;\n    healthy = g.ok(j);\n    detail = healthy ? 'ok' : JSON.stringify(j).slice(0, 300);\n  } catch (e) {\n    detail = 'node_error: ' + e.message;\n  }\n  if (!healthy) failures.push({ api: g.label, detail });\n}\nconst allApisHealthy = failures.length === 0;\nstaticData.apisHealthy = allApisHealthy;\nstaticData.lastApiGateCheck = new Date().toISOString();\nstaticData.lastApiGateFailures = failures;\nif (!allApisHealthy) {\n  staticData.productionHalted = true;\n  staticData.circuitBreakerHalted = true;\n} else {\n  staticData.productionHalted = false;\n  staticData.circuitBreakerHalted = false;\n}\nconst __sdG=$getWorkflowStaticData('global');\n(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('evaluateProductionApis: healthy='+allApisHealthy+' failures='+failures.length);\nconsole.log('[PIPELINE] GATE', allApisHealthy, failures);\nreturn [{\n  json: {\n    allApisHealthy,\n    failures,\n    failureSummary: failures.map(f => f.api + ': ' + f.detail).join('; '),\n    haltReason: allApisHealthy ? null : 'PRODUCTION_COST_GUARD',\n  }\n}];\n"
       },
-      "id": "fa7b5f31-076c-4c3d-a014-4f2e53406a2c",
+      "id": "fa1314ef-4c38-42af-85d0-289045689b83",
       "name": "evaluateProductionApis",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1740,
         -80
@@ -314,7 +314,7 @@
           "combinator": "and"
         }
       },
-      "id": "a9530750-1321-40c3-b71b-9273037698a2",
+      "id": "c63e7a06-73f1-4b3e-8e0b-4a493f82c246",
       "name": "productionGatePass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -325,12 +325,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nstaticData.productionHalted = true;\nstaticData.circuitBreakerHalted = true;\nstaticData.productionHaltAt = new Date().toISOString();\nstaticData.productionHaltReason = item.failureSummary || item.haltReason || 'API_GATE_FAILED';\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: staticData.productionHaltAt,\n  node_name: 'haltProduction',\n  error_code: 'PRODUCTION_COST_GUARD',\n  error_message: staticData.productionHaltReason,\n  article_url: 'n/a',\n});\npipelineLog('HALT production stopped: ' + (staticData.productionHaltReason || 'unknown'));\nreturn [{\n  json: {\n    halted: true,\n    stopServerRecommended: true,\n    message: 'One or more API keys failed. Workflow halted to avoid charges. Run: docker compose down',\n    failures: item.failures || staticData.lastApiGateFailures,\n    pipelineTrace: (staticData.pipelineLog || []).slice(-25),\n  }\n}];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nstaticData.productionHalted = true;\nstaticData.circuitBreakerHalted = true;\nstaticData.productionHaltAt = new Date().toISOString();\nstaticData.productionHaltReason = item.failureSummary || item.haltReason || 'API_GATE_FAILED';\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: staticData.productionHaltAt,\n  node_name: 'haltProduction',\n  error_code: 'PRODUCTION_COST_GUARD',\n  error_message: staticData.productionHaltReason,\n  article_url: 'n/a',\n});\nconst __sdH=$getWorkflowStaticData('global');\n(__sdH.pipelineLog=__sdH.pipelineLog||[]).push('haltProduction: '+staticData.productionHaltReason);\nreturn [{\n  json: {\n    halted: true,\n    stopServerRecommended: true,\n    message: 'One or more API keys failed. Workflow halted to avoid charges. Run: docker compose down',\n    failures: item.failures || staticData.lastApiGateFailures,\n    pipelineTrace: (staticData.pipelineLog || []).slice(-25),\n  }\n}];\n"
       },
-      "id": "1813616d-285f-4a50-8c52-f45fddedcade",
+      "id": "78e3a1e2-260f-41f8-a4ef-4055db3a59ca",
       "name": "haltProduction",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2180,
         80
@@ -340,10 +340,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst staticData = $getWorkflowStaticData('global');\nconst failures = item.failures || staticData.lastApiGateFailures || [];\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm:ss');\nreturn [{\n  json: {\n    ...item,\n    emailSubject: '[US News Bot] STOP SERVER \u2014 Production halted (API / cost guard)',\n    emailBody: `The workflow has been HALTED to prevent further API charges.\\n\\nTime (ET): ${et}\\n\\n=== WHAT HAPPENED ===\\n${item.failureSummary || staticData.productionHaltReason || 'API validation failed'}\\n\\nFailed APIs:\\n${JSON.stringify(failures, null, 2)}\\n\\n=== SHUTDOWN STEPS (do this now) ===\\n1. SSH into your VPS\\n2. cd ~/awraaq_sgid\\n3. ./scripts/stop-server.sh\\n   (same as: docker compose down)\\n\\n=== AFTER FIXING KEYS ===\\n1. docker compose up -d\\n2. n8n \u2192 /auto reset-errors\\n3. /auto health-check (all 4 APIs must pass)\\n4. /auto test-one\\n5. Re-activate workflow\\n\\nNo further post emails will be sent until the server is back and keys are fixed.`,\n  }\n}];\n"
       },
-      "id": "68e1d429-a75d-4eac-bc07-78942bec0715",
+      "id": "64e97c5d-90f6-452d-8d8f-2d907cc987ea",
       "name": "prepareHaltEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2400,
         80
@@ -356,7 +356,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "540e17ec-8ad8-4de2-847a-715ba90978c3",
+      "id": "81ed2b32-2980-4246-ac62-dff565b27eb2",
       "name": "emailProductionHalted",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -377,10 +377,10 @@
       "parameters": {
         "jsCode": "const { DateTime } = require('luxon');\nconst staticData = $getWorkflowStaticData('global');\nconst schedule = staticData.todaySchedule || [];\nconst times = schedule.map(s => `Slot ${s.slotIndex}: ${s.scheduledEt} ET (${s.windowLabel})`).join('\\n');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm');\nreturn [{\n  json: {\n    emailSubject: `[US News Bot] Daily run started \u2014 ${schedule.length} posts scheduled`,\n    emailBody: `All API keys passed the production gate. News fetching will begin now.\\n\\nDate (ET): ${et}\\n\\nToday's schedule:\\n${times || 'See n8n execution log'}\\n\\nYou will receive a separate email for each post: when creation starts, when published, if skipped, or if any error occurs.`,\n  }\n}];\n"
       },
-      "id": "e536c699-c7d0-4719-a388-ab878a25647f",
+      "id": "e48cfa9c-c2f0-4a4d-9ec3-e5d92bd063e9",
       "name": "prepareDailyRunEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         40
@@ -393,7 +393,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "14a334ee-b773-45c7-8502-66bbae45d77b",
+      "id": "1797ba80-c92a-402a-880c-3be393712fff",
       "name": "emailDailyRunStarted",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -412,12 +412,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\npipelineLog('prepareCategory \u2014 starting news fetch');\nreturn [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];\n} catch (fatal) {\n  pipelineLog('FATAL [prepareCategory]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'prepareCategory', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const __sdC=$getWorkflowStaticData('global');\n(__sdC.pipelineLog=__sdC.pipelineLog||[]).push('prepareCategory: start fetch');\nconsole.log('[PIPELINE] prepareCategory');\nreturn [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];"
       },
-      "id": "3ec30e6f-a442-4875-bdd2-fe436fabb3ed",
+      "id": "79e8adf5-04b1-4b7d-82ba-ea71ab0d7846",
       "name": "prepareCategory",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         860,
         160
@@ -462,7 +462,7 @@
           ]
         }
       },
-      "id": "86ec57bc-9774-496e-8b49-9d5453ff6a1a",
+      "id": "70e7bb05-e529-4899-b7b0-de856e10351e",
       "name": "fetchPoliticsNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -514,7 +514,7 @@
           ]
         }
       },
-      "id": "2a11f6d7-7756-42e3-b7ec-333f62e1660c",
+      "id": "8713f913-92b5-40b8-b82b-3975334823a6",
       "name": "fetchCelebritiesNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -529,12 +529,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nfunction safeArticles(nodeName) {\n  try {\n    const j = $(nodeName).first().json;\n    if (j.error || (j.status && j.status !== 'ok')) {\n      pipelineLog('NEWS ' + nodeName + ' bad response: ' + JSON.stringify(j).slice(0, 200));\n      return [];\n    }\n    return j.articles || [];\n  } catch (e) {\n    pipelineLog('NEWS ' + nodeName + ' error: ' + e.message);\n    return [];\n  }\n}\nconst politics = safeArticles('fetchPoliticsNews');\nconst celebrities = safeArticles('fetchCelebritiesNews');\nlet articles = [\n  ...politics.map(a => ({ ...a, _topic: 'politics' })),\n  ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),\n];\nif (articles.length === 0) {\n  try {\n    const gate = $('productionGateNewsAPI').first().json;\n    const fromGate = (gate.articles || []).map(a => ({ ...a, _topic: 'politics' }));\n    if (fromGate.length) {\n      pipelineLog('NEWS using productionGateNewsAPI fallback count=' + fromGate.length);\n      articles = fromGate;\n    }\n  } catch (e) {\n    pipelineLog('NEWS gate fallback failed: ' + e.message);\n  }\n}\npipelineLog('NEWS politics=' + politics.length + ' celebrities=' + celebrities.length + ' total=' + articles.length);\nif (articles.length === 0) {\n  throw new Error('MERGE_NEWS_FEEDS: 0 articles \u2014 check NEWSAPI_KEY, User-Agent header, or quota.');\n}\nreturn [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "function safeArticles(nodeName) {\n  try {\n    const j = $(nodeName).first().json;\n    if (j.error || (j.status && j.status !== 'ok')) {\n      return [];\n    }\n    return j.articles || [];\n  } catch (e) {\n    return [];\n  }\n}\nconst politics = safeArticles('fetchPoliticsNews');\nconst celebrities = safeArticles('fetchCelebritiesNews');\nlet articles = [\n  ...politics.map(a => ({ ...a, _topic: 'politics' })),\n  ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),\n];\nif (articles.length === 0) {\n  throw new Error('MERGE_NEWS_FEEDS: 0 articles \u2014 check NEWSAPI_KEY or quota.');\n}\nconst __sdN=$getWorkflowStaticData('global');\n(__sdN.pipelineLog=__sdN.pipelineLog||[]).push('mergeNewsFeeds: politics='+politics.length+' celeb='+celebrities.length+' total='+articles.length);\nconsole.log('[PIPELINE] mergeNewsFeeds', politics.length, celebrities.length, articles.length);\nreturn [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];\n"
       },
-      "id": "bca86228-a351-492c-81ab-fe45edb7d5ed",
+      "id": "3b2bf3e7-e6aa-4ddd-86b3-a2df87756106",
       "name": "mergeNewsFeeds",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1520,
         0
@@ -544,10 +544,10 @@
       "parameters": {
         "jsCode": "return [{ json: { ...$input.first().json, _category: 'politics+celebrities' } }];"
       },
-      "id": "d6683743-737d-466a-b6fc-ba617a60e5ce",
+      "id": "22720b6c-3e82-4d7e-9de1-847daeba9cfa",
       "name": "tagCategory",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1740,
         0
@@ -555,12 +555,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst testMode = staticData.singleSlotTest === true;\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];\n\nconst TOPIC_KEYWORDS = {\n  politics: /politic|election|congress|senate|house|white house|president|governor|vote|campaign|capitol|democrat|republican|legislation|supreme court/i,\n  celebrities: /celebrity|hollywood|actor|actress|singer|star|entertainment|fame|red carpet|grammy|oscar|kardashian|royal|influencer|premiere|pop culture/i,\n};\n\nfunction topicScore(article) {\n  const text = `${article.title || ''} ${article.description || ''}`;\n  let score = 0;\n  if (TOPIC_KEYWORDS.politics.test(text)) score += 2;\n  if (TOPIC_KEYWORDS.celebrities.test(text)) score += 2;\n  if (article._topic === 'politics' && TOPIC_KEYWORDS.politics.test(text)) score += 1;\n  if (article._topic === 'celebrities' && TOPIC_KEYWORDS.celebrities.test(text)) score += 1;\n  return score;\n}\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\n\nfunction isValid(article) {\n  if (!article.title || !article.description) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  const domain = getDomain(article.url || '');\n  if (NOISE.some(n => domain.includes(n))) return false;\n  if (!testMode && !article.urlToImage) return false;\n  return true;\n}\n\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nconst primary = $input.first().json.articles || [];\nlet filtered = primary.filter(isValid)\n  .filter(a => !postedURLs.includes(a.url))\n  .filter(a => testMode || topicScore(a) > 0)\n  .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));\n\n// Prefer mix: up to 6 politics + 6 celebrities, then fill to 10\nconst politics = filtered.filter(a => TOPIC_KEYWORDS.politics.test(`${a.title} ${a.description}`) || a._topic === 'politics');\nconst celebs = filtered.filter(a => !politics.includes(a));\nlet mixed = [...politics.slice(0, 6), ...celebs.slice(0, 6)];\nconst seen = new Set(mixed.map(a => a.url));\nfor (const a of filtered) {\n  if (mixed.length >= 10) break;\n  if (!seen.has(a.url)) { mixed.push(a); seen.add(a.url); }\n}\nmixed = mixed.slice(0, 10);\n\nif (mixed.length === 0) {\n  const pool = primary.filter(isValid).filter(a => !postedURLs.includes(a.url));\n  const relaxed = testMode\n    ? pool.slice(0, 3)\n    : pool.filter(a => topicScore(a) > 0).slice(0, 10);\n  mixed = relaxed.length ? relaxed : pool.slice(0, testMode ? 1 : 5);\n}\n\nconst output = mixed.map(a => ({\n  title: a.title,\n  description: a.description,\n  url: a.url,\n  urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,\n  source: { name: a.source?.name || 'Unknown' },\n  isRepost: false,\n}));\n\npipelineLog('FILTER primary=' + primary.length + ' output=' + output.length + ' needed=' + (10 - output.length) + ' testMode=' + testMode);\nif (output.length === 0) {\n  throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);\n}\n\nreturn [{\n  json: {\n    articles: output,\n    needed: 10 - output.length,\n    category: 'politics+celebrities',\n  }\n}];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst testMode = staticData.singleSlotTest === true;\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];\n\nconst TOPIC_KEYWORDS = {\n  politics: /politic|election|congress|senate|house|white house|president|governor|vote|campaign|capitol|democrat|republican|legislation|supreme court/i,\n  celebrities: /celebrity|hollywood|actor|actress|singer|star|entertainment|fame|red carpet|grammy|oscar|kardashian|royal|influencer|premiere|pop culture/i,\n};\n\nfunction topicScore(article) {\n  const text = `${article.title || ''} ${article.description || ''}`;\n  let score = 0;\n  if (TOPIC_KEYWORDS.politics.test(text)) score += 2;\n  if (TOPIC_KEYWORDS.celebrities.test(text)) score += 2;\n  if (article._topic === 'politics' && TOPIC_KEYWORDS.politics.test(text)) score += 1;\n  if (article._topic === 'celebrities' && TOPIC_KEYWORDS.celebrities.test(text)) score += 1;\n  return score;\n}\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\n\nfunction isValid(article) {\n  if (!article.title || !article.description) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  const domain = getDomain(article.url || '');\n  if (NOISE.some(n => domain.includes(n))) return false;\n  if (!testMode && !article.urlToImage) return false;\n  return true;\n}\n\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nconst primary = $input.first().json.articles || [];\nlet filtered = primary.filter(isValid)\n  .filter(a => !postedURLs.includes(a.url))\n  .filter(a => testMode || topicScore(a) > 0)\n  .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));\n\n// Prefer mix: up to 6 politics + 6 celebrities, then fill to 10\nconst politics = filtered.filter(a => TOPIC_KEYWORDS.politics.test(`${a.title} ${a.description}`) || a._topic === 'politics');\nconst celebs = filtered.filter(a => !politics.includes(a));\nlet mixed = [...politics.slice(0, 6), ...celebs.slice(0, 6)];\nconst seen = new Set(mixed.map(a => a.url));\nfor (const a of filtered) {\n  if (mixed.length >= 10) break;\n  if (!seen.has(a.url)) { mixed.push(a); seen.add(a.url); }\n}\nmixed = mixed.slice(0, 10);\n\nif (mixed.length === 0) {\n  const pool = primary.filter(isValid).filter(a => !postedURLs.includes(a.url));\n  const relaxed = testMode\n    ? pool.slice(0, 3)\n    : pool.filter(a => topicScore(a) > 0).slice(0, 10);\n  mixed = relaxed.length ? relaxed : pool.slice(0, testMode ? 1 : 5);\n}\n\nconst output = mixed.map(a => ({\n  title: a.title,\n  description: a.description,\n  url: a.url,\n  urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,\n  source: { name: a.source?.name || 'Unknown' },\n  isRepost: false,\n}));\n\nconst __sdF=$getWorkflowStaticData('global');\n(__sdF.pipelineLog=__sdF.pipelineLog||[]).push('filterArticles: primary='+primary.length+' output='+output.length);\nconsole.log('[PIPELINE] filterArticles', primary.length, output.length);\nif (output.length === 0) {\n  throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);\n}\n\nreturn [{\n  json: {\n    articles: output,\n    needed: 10 - output.length,\n    category: 'politics+celebrities',\n  }\n}];\n"
       },
-      "id": "de81767e-7cca-423d-acd1-607f0d7886a0",
+      "id": "220825b2-3677-4410-a86f-982a208c4d84",
       "name": "filterArticles",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         0
@@ -570,10 +570,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconsole.log('FILTER_ARTICLES count=' + (j.articles || []).length + ' needed=' + j.needed);\nreturn [$input.first()];\n"
       },
-      "id": "a6ca7d22-d02c-430f-a4a8-fe93dd78abd4",
+      "id": "0e12184c-f590-45a5-89f1-c43b1175a7bc",
       "name": "logFilterStats",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         60
@@ -601,7 +601,7 @@
           "combinator": "and"
         }
       },
-      "id": "d7673a23-2e00-4896-849d-8f7d7a2deb89",
+      "id": "92a7d15e-0177-4aee-9d8d-238b1ac41508",
       "name": "checkNeedsFallback",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -649,7 +649,7 @@
           ]
         }
       },
-      "id": "3284d854-8e86-482c-9b38-df21ac2f7941",
+      "id": "51a64d18-2bc2-48a9-a933-bf78be27d220",
       "name": "fetchFallbackNews",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -664,12 +664,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst testMode = staticData.singleSlotTest === true;\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];\nconst PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\nfunction isValid(article) {\n  if (!article.title || !article.description) return false;\n  if (!testMode && !article.urlToImage) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  if (NOISE.some(n => getDomain(article.url || '').includes(n))) return false;\n  return true;\n}\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nlet articles = $('filterArticles').first().json.articles || [];\nconst needed = 10 - articles.length;\n\nif (needed > 0) {\n  const fallback = $input.first().json.articles || [];\n  const existing = new Set(articles.map(a => a.url));\n  const extra = fallback.filter(isValid)\n    .filter(a => !postedURLs.includes(a.url))\n    .filter(a => !existing.has(a.url))\n    .sort((a, b) => priorityScore(b) - priorityScore(a));\n\n  for (const a of extra) {\n    if (articles.length >= 10) break;\n    articles.push({\n      title: a.title,\n      description: a.description,\n      url: a.url,\n      urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,\n      source: { name: a.source?.name || 'Unknown' },\n      isRepost: false,\n    });\n    existing.add(a.url);\n  }\n}\n\nif (articles.length < 10) {\n  const allFiltered = [...($('filterArticles').first().json.articles || []),\n    ...($input.first().json.articles || []).filter(isValid).map(a => ({\n      title: a.title, description: a.description, url: a.url,\n      urlToImage: a.urlToImage, source: { name: a.source?.name || 'Unknown' }, isRepost: false,\n    }))];\n  let i = 0;\n  while (articles.length < 10 && allFiltered.length > 0) {\n    const a = allFiltered[i % allFiltered.length];\n    articles.push({ ...a, isRepost: true });\n    i++;\n  }\n}\n\nif (articles.length === 0) {\n  throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback \u2014 check NEWSAPI_KEY, quota, or flush-cache.');\n}\npipelineLog('FILL finalCount=' + articles.length);\n\nreturn articles.slice(0, 10).map((a, idx) => ({\n  json: { ...a, articleIndex: idx + 1 }\n}));\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst testMode = staticData.singleSlotTest === true;\nconst postedURLs = staticData.postedURLs || [];\nconst NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];\nconst PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];\nconst PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';\n\nfunction getDomain(url) {\n  try { return new URL(url).hostname.replace(/^www\\./, ''); } catch { return ''; }\n}\nfunction isValid(article) {\n  if (!article.title || !article.description) return false;\n  if (!testMode && !article.urlToImage) return false;\n  if (article.title === '[Removed]' || article.description === '[Removed]') return false;\n  if (NOISE.some(n => getDomain(article.url || '').includes(n))) return false;\n  return true;\n}\nfunction priorityScore(article) {\n  const domain = getDomain(article.url || '');\n  const idx = PRIORITY.findIndex(p => domain.includes(p));\n  return idx >= 0 ? PRIORITY.length - idx : 0;\n}\n\nlet articles = $('filterArticles').first().json.articles || [];\nconst needed = 10 - articles.length;\n\nif (needed > 0) {\n  const fallback = $input.first().json.articles || [];\n  const existing = new Set(articles.map(a => a.url));\n  const extra = fallback.filter(isValid)\n    .filter(a => !postedURLs.includes(a.url))\n    .filter(a => !existing.has(a.url))\n    .sort((a, b) => priorityScore(b) - priorityScore(a));\n\n  for (const a of extra) {\n    if (articles.length >= 10) break;\n    articles.push({\n      title: a.title,\n      description: a.description,\n      url: a.url,\n      urlToImage: a.urlToImage || PLACEHOLDER_IMAGE,\n      source: { name: a.source?.name || 'Unknown' },\n      isRepost: false,\n    });\n    existing.add(a.url);\n  }\n}\n\nif (articles.length < 10) {\n  const allFiltered = [...($('filterArticles').first().json.articles || []),\n    ...($input.first().json.articles || []).filter(isValid).map(a => ({\n      title: a.title, description: a.description, url: a.url,\n      urlToImage: a.urlToImage, source: { name: a.source?.name || 'Unknown' }, isRepost: false,\n    }))];\n  let i = 0;\n  while (articles.length < 10 && allFiltered.length > 0) {\n    const a = allFiltered[i % allFiltered.length];\n    articles.push({ ...a, isRepost: true });\n    i++;\n  }\n}\n\nif (articles.length === 0) {\n  throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback \u2014 check NEWSAPI_KEY, quota, or flush-cache.');\n}\nconst __sdFill=$getWorkflowStaticData('global');\n(__sdFill.pipelineLog=__sdFill.pipelineLog||[]).push('fillRemainingSlots: count='+articles.length);\nreturn articles.slice(0, 10).map((a, idx) => ({\n  json: { ...a, articleIndex: idx + 1 }\n}));\n"
       },
-      "id": "ba4f4621-fab3-415e-961f-bfd90e7c11a2",
+      "id": "c5a2a0cc-c333-4833-b870-dfd3052fb902",
       "name": "fillRemainingSlots",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2180,
         0
@@ -679,10 +679,10 @@
       "parameters": {
         "jsCode": "const arts = $('filterArticles').first().json.articles || [];\nif (arts.length === 0) throw new Error('filterArticles returned 0 articles');\nreturn arts.map((a,i)=>({json:{...a,articleIndex:i+1}}));"
       },
-      "id": "be07d932-a1fe-4546-9a4d-491a3b09cc3f",
+      "id": "8f5fa8b5-acf1-43e7-bcb7-a076b6f386f5",
       "name": "passthroughNoFallback",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         100
@@ -690,12 +690,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst schedule = staticData.todaySchedule || [];\nlet items = $input.all().map(i => i.json);\npipelineLog('MERGE_SCHEDULE inputItems=' + items.length);\nif (items.length === 0) {\n  throw new Error('MERGE_SCHEDULE: No articles to post \u2014 NewsAPI empty or all URLs in posted cache. Run flush-cache.');\n}\nif (staticData.singleSlotTest) {\n  items = items.slice(0, 1);\n  staticData.singleSlotTest = false;\n}\n\nreturn items.map((article, idx) => {\n  const slot = schedule[idx] || schedule[0];\n  return {\n    json: {\n      ...article,\n      slotIndex: slot.slotIndex,\n      epochMs: slot.epochMs,\n      windowLabel: slot.windowLabel,\n      scheduledEt: slot.scheduledEt,\n    }\n  };\n});\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst schedule = staticData.todaySchedule || [];\nlet items = $input.all().map(i => i.json);\nconst __sdM=$getWorkflowStaticData('global');\n(__sdM.pipelineLog=__sdM.pipelineLog||[]).push('mergeSchedule: items='+items.length);\nconsole.log('[PIPELINE] mergeSchedule items='+items.length);\nif (items.length === 0) {\n  throw new Error('MERGE_SCHEDULE: No articles to post \u2014 NewsAPI empty or all URLs in posted cache. Run flush-cache.');\n}\nif (staticData.singleSlotTest) {\n  items = items.slice(0, 1);\n  staticData.singleSlotTest = false;\n}\n\nreturn items.map((article, idx) => {\n  const slot = schedule[idx] || schedule[0];\n  return {\n    json: {\n      ...article,\n      slotIndex: slot.slotIndex,\n      epochMs: slot.epochMs,\n      windowLabel: slot.windowLabel,\n      scheduledEt: slot.scheduledEt,\n    }\n  };\n});\n"
       },
-      "id": "16237335-41b3-448c-8854-971608894f25",
+      "id": "61aa0424-e958-42e4-86cb-88d1e6a40983",
       "name": "mergeScheduleWithArticles",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2400,
         300
@@ -705,10 +705,10 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconsole.log('MERGE_SCHEDULE items=' + items.length);\nif (items.length === 0) {\n  throw new Error('No articles to post \u2014 check NewsAPI filters or run flush-cache');\n}\nreturn items;\n"
       },
-      "id": "18e0a3be-8a3d-4fcd-b72a-aed3437f5d5a",
+      "id": "c40d8c1e-f1dd-4339-9a2a-cb98993bc914",
       "name": "logMergeStats",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2400,
         380
@@ -719,7 +719,7 @@
         "batchSize": 1,
         "options": {}
       },
-      "id": "63bfcb9e-52c7-4b8b-a295-c82756bb074c",
+      "id": "36473087-a04c-4916-ab04-4da9c4c07872",
       "name": "splitInBatches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
@@ -730,12 +730,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nif (staticData.forcePostTest) {\n  staticData.forcePostTest = false;\n  pipelineLog('SLOT forcePostTest \u2014 post immediately');\n  return [{ json: { ...item, waitMs: 0, halted: false } }];\n}\nif (staticData.productionHalted) {\n  pipelineLog('SLOT SKIP productionHalted=true');\n  return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];\n}\nif (staticData.circuitBreakerHalted) {\n  pipelineLog('SLOT SKIP circuitBreakerHalted=true');\n  return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];\n}\nconst waitMs = Math.max(0, item.epochMs - Date.now());\n  pipelineLog('SLOT waitMs=' + waitMs + ' title=' + (item.title || '').slice(0, 60));\nreturn [{ json: { ...item, waitMs, halted: false } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nif (staticData.forcePostTest) {\n  staticData.forcePostTest = false;\n  const __sdS=$getWorkflowStaticData('global');\n  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: forcePostTest');\n  return [{ json: { ...item, waitMs: 0, halted: false } }];\n}\nif (staticData.productionHalted) {\n  const __sdS=$getWorkflowStaticData('global');\n  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP productionHalted');\n  return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];\n}\nif (staticData.circuitBreakerHalted) {\n  const __sdS=$getWorkflowStaticData('global');\n  (__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: SKIP circuitBreaker');\n  return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];\n}\nconst waitMs = Math.max(0, item.epochMs - Date.now());\nconst __sdS=$getWorkflowStaticData('global');\n(__sdS.pipelineLog=__sdS.pipelineLog||[]).push('prepareSlotWait: waitMs='+waitMs);\nreturn [{ json: { ...item, waitMs, halted: false } }];\n"
       },
-      "id": "be213927-86e4-46e2-9024-64d1f875b2a3",
+      "id": "b95df838-4e00-4681-bed9-fedbf74f71da",
       "name": "prepareSlotWait",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         420,
         300
@@ -763,7 +763,7 @@
           "combinator": "and"
         }
       },
-      "id": "12991b77-ad5d-46ad-be5a-12d8f51eceff",
+      "id": "d022b5ec-38a5-46fe-ba01-8e7d5214a045",
       "name": "checkHalted",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -774,12 +774,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';\npipelineLog('SKIP_HALTED reason=' + reason);\nreturn [{ json: { skipped: true, reason } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';\nconst __sdSk=$getWorkflowStaticData('global');\n(__sdSk.pipelineLog=__sdSk.pipelineLog||[]).push('SKIP_HALTED: '+reason);\nreturn [{ json: { skipped: true, reason } }];\n"
       },
-      "id": "717b20a7-f73c-41c0-b7f2-a17454c7eacc",
+      "id": "525421f3-e414-4735-a91b-07948ef42fe7",
       "name": "skipHalted",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         640,
         420
@@ -787,12 +787,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst sd = $getWorkflowStaticData('global');\nconst lines = sd.pipelineLog || [];\npipelineLog('SUMMARY complete build=2026-05-30-trace-v5');\nreturn [{ json: { build: '2026-05-30-trace-v5', trace: lines.slice(-30) } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nconst lines = sd.pipelineLog || [];\n(sd.pipelineLog=sd.pipelineLog||[]).push('pipelineSummary: build=2026-05-30-trace-v6-fix');\nreturn [{ json: { build: '2026-05-30-trace-v6-fix', trace: lines.slice(-30) } }];\n"
       },
-      "id": "b5e3d581-18e3-4cf0-989d-5b072fc03e8c",
+      "id": "7b620768-1a7a-47f7-b564-1c449b328c81",
       "name": "pipelineSummary",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         640,
         500
@@ -804,7 +804,7 @@
         "amount": "={{ $json.waitMs }}",
         "unit": "milliseconds"
       },
-      "id": "4fe74816-1fe5-4f8b-8927-477d6a6ca570",
+      "id": "92fe2526-c1d6-489f-af83-a884be83ae53",
       "name": "waitForSlot",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
@@ -831,7 +831,7 @@
           ]
         }
       },
-      "id": "c7122769-644e-4b29-98d2-379f3d823da8",
+      "id": "eeaf5691-f542-4eb5-a0f2-592800f9d03a",
       "name": "checkFBToken",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -845,10 +845,10 @@
       "parameters": {
         "jsCode": "const response = $input.first().json;\nconst err = response.error || (response.errors && response.errors[0]);\nconst isValid = !!(response.id && !err);\nconst item = $('prepareSlotWait').first().json;\nif (!isValid) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.errorLog = staticData.errorLog || [];\n  staticData.errorLog.push({\n    timestamp: new Date().toISOString(),\n    node_name: 'parseFBToken',\n    error_code: 'TOKEN_CHECK_FAILED',\n    error_message: err ? JSON.stringify(err).slice(0, 300) : JSON.stringify(response).slice(0, 300),\n    article_url: item.url,\n  });\n}\nreturn [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting: !isValid, tokenCheckDetail: err || response.id } }];\n"
       },
-      "id": "9baa7afc-bc8e-4647-8175-63c033c10c91",
+      "id": "d205b8ba-c152-452c-9202-bc2be24a7780",
       "name": "parseFBToken",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1300,
         300
@@ -876,7 +876,7 @@
           "combinator": "and"
         }
       },
-      "id": "8373fea2-5ab1-4829-a310-e1bfecf55e4c",
+      "id": "90511b1b-c18c-4243-8d50-54be4553a9c9",
       "name": "tokenGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -889,10 +889,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'checkFBToken',\n  error_code: 'TOKEN_INVALID',\n  error_message: 'FB token invalid or expires within 7 days',\n  article_url: $input.first().json.url,\n});\nreturn [{ json: { skipped: true, reason: 'TOKEN_INVALID' } }];\n"
       },
-      "id": "91e5cecb-1f14-4aad-aa54-a0c51deb05a7",
+      "id": "77ed6582-dfea-4d18-873d-bcdb781a3262",
       "name": "skipInvalidToken",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1520,
         420
@@ -902,10 +902,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst days = typeof item.expiresInDays === 'number' ? item.expiresInDays.toFixed(1) : 'unknown';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] URGENT \u2014 Facebook token invalid or expiring (${days} days)`,\n    emailBody: `Facebook Page access token check FAILED before posting.\\n\\nToken valid: ${item.tokenValid}\\nExpires in (days): ${days}\\nSlot skipped: ${item.slotIndex}\\nArticle: ${item.title}\\n\\nAction required:\\n1. Regenerate never-expiring System User token (Setup Guide Part F)\\n2. Update FB_PAGE_ACCESS_TOKEN in n8n Credentials\\n3. Run /auto check-token\\n\\nPosting for this slot was skipped. Fix token before next slot.`,\n  }\n}];\n"
       },
-      "id": "11351c10-49ca-404d-ad5e-8988f9c2e646",
+      "id": "0b9270d5-b2a8-41e3-9954-339d29606552",
       "name": "prepareTokenAlertEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1740,
         420
@@ -918,7 +918,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "57429a44-a036-42a7-b248-f9e12e8cd987",
+      "id": "d1fa57d2-da58-45cb-8f11-dc7734096d35",
       "name": "emailTokenExpired",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -939,10 +939,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('HH:mm:ss');\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Creating post \u2014 Slot ${item.slotIndex}/10`,\n    emailBody: `Post creation started for this slot.\\n\\nTime (ET): ${et}\\nSlot: ${item.slotIndex} (${item.windowLabel})\\nScheduled: ${item.scheduledEt} ET\\nTitle: ${item.title}\\nSource: ${item.source?.name}\\n\\nNext steps: AI caption \u2192 compliance review \u2192 image \u2192 Facebook publish.\\nYou will get another email when the post is published or skipped.`,\n  }\n}];\n"
       },
-      "id": "42a68bed-0d58-4be6-83bd-0c07a7643f98",
+      "id": "24a571c2-0143-4e08-ab3a-4f9bda2b1a2a",
       "name": "prepareSlotStartEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2180,
         340
@@ -955,7 +955,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "0f99e1ae-79db-4104-ac1e-dc7ea949d23f",
+      "id": "4578013e-221e-4533-896d-e54df4aab735",
       "name": "emailSlotPostStarting",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -976,10 +976,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst { DateTime } = require('luxon');\nconst et = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd HH:mm:ss');\nconst pageId = $env.FB_PAGE_ID || 'your-page-id';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Published \u2014 Slot ${item.slotIndex}/10`,\n    emailBody: `Post successfully published to Facebook.\\n\\nTime (ET): ${et}\\nSlot: ${item.slotIndex} (${item.windowLabel})\\nFacebook Post ID: ${item.post_id}\\n\\nHeadline: ${item.title}\\nSource: ${item.source?.name}\\nArticle: ${item.url}\\n\\nImage: ${item.imageSource}\\nQuality score: ${item.audit?.quality_score ?? 'n/a'}/10\\nCompliance: ${item.audit?.compliance_status ?? 'n/a'}\\n\\nView Page: https://www.facebook.com/${pageId}`,\n  }\n}];\n"
       },
-      "id": "65613e2a-fbb9-4ffe-ae1c-813810f0d5c8",
+      "id": "23c07d0f-96d5-4cac-a4b3-f3b31f557a45",
       "name": "preparePostSuccessEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1300,
         1240
@@ -992,7 +992,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "094f7f16-d2bd-4309-aae5-7d3454906fca",
+      "id": "01af732a-2f76-4116-b378-b0d4f2e5a1c1",
       "name": "emailPostPublished",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1013,10 +1013,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst reason = item.reason || item.skipReason || item.publishBlockedReason || 'UNKNOWN';\nconst labels = {\n  SKIPPED_COMPLIANCE: 'AI compliance review failed after max rewrites',\n  PUBLISH_BLOCKED_MISSING_REVIEW: 'Mandatory review layers not satisfied',\n  TOKEN_INVALID: 'Facebook token invalid or expiring within 7 days',\n  PRODUCTION_API_HALT: 'Production halted \u2014 API key failure',\n  CIRCUIT_BREAKER_HALTED: 'Circuit breaker \u2014 too many publish failures',\n  PRODUCTION_API_HALT: 'Production API guard halted workflow',\n};\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] SKIPPED \u2014 Slot ${item.slotIndex || '?'} (${reason})`,\n    emailBody: `This slot was NOT posted to Facebook.\\n\\nReason: ${labels[reason] || reason}\\nSlot: ${item.slotIndex} (${item.windowLabel || ''})\\nTitle: ${item.title || 'n/a'}\\nDetail: ${item.review?.reason || item.failureSummary || ''}\\nTime: ${new Date().toISOString()}`,\n  }\n}];\n"
       },
-      "id": "d8aa741f-9b04-4ffc-b385-2438a54aec59",
+      "id": "f3dac463-3654-444a-8b83-8320cdc5e2c1",
       "name": "preparePostSkippedEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         4600,
         800
@@ -1029,7 +1029,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "05e377b6-a158-400b-bf12-03246f0b7dfc",
+      "id": "138bb02b-9133-4852-8112-12680be86c9c",
       "name": "emailPostSkipped",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1050,10 +1050,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst errMsg = item.error?.message || item.error?.description || JSON.stringify(item.error || item);\nconst haltNote = (item.consecutiveFailures || 0) > 4\n  ? '\\n\\nCIRCUIT BREAKER: Remaining slots halted for today. You will receive a separate email.'\n  : '';\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Publish FAILED \u2014 Slot ${item.slotIndex || '?'}`,\n    emailBody: `Facebook API rejected or failed this post.\\n\\nSlot: ${item.slotIndex}\\nTitle: ${item.title || 'n/a'}\\nError: ${errMsg}\\nConsecutive failures today: ${item.consecutiveFailures || 0}${haltNote}`,\n  }\n}];\n"
       },
-      "id": "329e64f2-d4d6-4bb0-bc31-379aa876c478",
+      "id": "54c64e64-d1e6-4043-8985-654a9a005a26",
       "name": "preparePublishFailEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         640,
         1380
@@ -1066,7 +1066,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "1b2f52ca-85cd-445c-b56d-b19ecebb3f74",
+      "id": "e5124de2-9b98-490f-8d72-f19cfb9fe19f",
       "name": "emailPublishFailed",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1087,10 +1087,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    emailSubject: '[US News Bot] Circuit breaker \u2014 posting halted for today',\n    emailBody: `More than 4 consecutive Facebook publish failures.\\n\\nConsecutive failures: ${item.consecutiveFailures}\\n\\nRemaining slots today will be skipped.\\n\\nCheck errorLog in n8n, verify FB token and permissions, then /auto reset-errors after fixing.`,\n  }\n}];\n"
       },
-      "id": "23c85c36-72ee-4a86-a5d5-c13979eee175",
+      "id": "4db4d11a-099f-48e9-81c5-7e636c3bba23",
       "name": "prepareCircuitBreakerEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         860,
         1500
@@ -1100,10 +1100,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] Image fallback \u2014 Slot ${item.slotIndex}`,\n    emailBody: `AI image prompt was rejected by compliance review. Using NewsAPI photo instead (no OpenAI image charge).\\n\\nSlot: ${item.slotIndex}\\nTitle: ${item.title}\\nReason: ${item.imageReview?.reason || 'policy'}\\n\\nPublishing will continue with urlToImage fallback.`,\n  }\n}];\n"
       },
-      "id": "9021bcea-855f-40e1-915d-36a9942806c8",
+      "id": "cf43bd3a-88c1-4ced-879f-ce999f05d82f",
       "name": "prepareImageFallbackEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3940,
         780
@@ -1116,7 +1116,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "8823553f-acd5-4801-89d8-573c4075c9c2",
+      "id": "26383111-b334-4af7-8e35-3e83777bbfe2",
       "name": "emailImageFallbackUsed",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -1158,7 +1158,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 350, system: \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\", messages: [{ role: \"user\", content: \"Write a Facebook caption for this US politics/celebrity story. Title: \" + $json.title + \". Description: \" + ($json.description || \"\") + \". Source: \" + ($json.source?.name || \"Unknown\") }] }) }}"
       },
-      "id": "8af0e2fc-35f2-449c-b340-b3d65f8aa353",
+      "id": "3a005958-ffae-488b-985a-01d47ffefa4f",
       "name": "captionAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1189,7 +1189,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: ($env.GROQ_MODEL || \"llama-3.1-8b-instant\"), max_tokens: 350, messages: [{ role: \"system\", content: \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\" }, { role: \"user\", content: \"Write a Facebook caption for this US politics/celebrity story. Title: \" + $json.title + \". Description: \" + ($json.description || \"\") + \". Source: \" + ($json.source?.name || \"Unknown\") }] }) }}"
       },
-      "id": "0a597a46-add8-44e4-ad28-b3b4c360e4d4",
+      "id": "59555391-61d1-4f31-91a8-d7d6fe7920b3",
       "name": "captionGroq",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1216,7 +1216,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ systemInstruction: { parts: [{ text: \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\" }] }, contents: [{ role: \"user\", parts: [{ text: \"Write a Facebook caption for this US politics/celebrity story. Title: \" + $json.title + \". Description: \" + ($json.description || \"\") + \". Source: \" + ($json.source?.name || \"Unknown\") }] }], generationConfig: { maxOutputTokens: 350 } }) }}"
       },
-      "id": "91a0b04f-d3f1-46d3-af91-c0b0e20ea63e",
+      "id": "203240a7-2c95-469b-988e-c1e99eec50b0",
       "name": "captionGemini",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1230,10 +1230,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst item = $('prepareSlotWait').first().json;\nconst text = (j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();\nconst provider = j.content ? 'anthropic' : (j.choices ? 'groq' : (j.candidates ? 'gemini' : 'unknown'));\nreturn [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: text.length > 20, rewriteAttempt: 0 } }];\n"
       },
-      "id": "ed235373-5579-495e-8221-ccbfb033e16f",
+      "id": "18db83fa-0e0d-4a79-beb9-e988228ef943",
       "name": "extractCaptionGroq",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         680
@@ -1243,10 +1243,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst item = $('prepareSlotWait').first().json;\nconst text = (j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();\nconst provider = j.content ? 'anthropic' : (j.choices ? 'groq' : (j.candidates ? 'gemini' : 'unknown'));\nreturn [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: text.length > 20, rewriteAttempt: 0 } }];\n"
       },
-      "id": "636f3bbf-f488-44c0-96bd-cf641237bd50",
+      "id": "c70040b3-b010-4639-995c-593839386ec6",
       "name": "extractCaptionGemini",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         760
@@ -1274,7 +1274,7 @@
           "combinator": "and"
         }
       },
-      "id": "5a7680e3-d14c-4082-8a0f-122ff895fd3f",
+      "id": "a0f859ae-138b-4fd8-ab58-f048d87b6097",
       "name": "gateCaptionGroq",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1305,7 +1305,7 @@
           "combinator": "and"
         }
       },
-      "id": "6cd47da6-4994-48b0-8909-2fdbef1f103b",
+      "id": "923af883-06bb-4a2a-afb4-6d1adde24d66",
       "name": "gateCaptionGemini",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1318,10 +1318,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $('prepareSlotWait').first().json;\nstaticData.productionHalted = true;\nstaticData.productionHaltReason = 'ALL_LLM_CAPTION_PROVIDERS_FAILED';\nreturn [{ json: {\n  ...item,\n  captionGenerated: false,\n  haltReason: 'ALL_LLM_CAPTION_PROVIDERS_FAILED',\n  failureSummary: 'Claude, Groq, and Gemini all failed. Run: docker compose down',\n  stopServerRecommended: true,\n} }];\n"
       },
-      "id": "d584467c-f9a6-407d-84ff-5c3878d481e4",
+      "id": "d16d4a4a-c805-4059-91a9-b2224c00982e",
       "name": "haltLlmFailed",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2180,
         760
@@ -1331,10 +1331,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{ json: {\n  ...item,\n  review: { approved: true, risk_level: 'low', flags: [], rewrite_needed: false, reason: 'auto_pass' },\n  aiCaptionApproved: true,\n  prePublishReviewPassed: true,\n} }];\n"
       },
-      "id": "0b73410b-027a-40d3-a044-3a5c3613e444",
+      "id": "3f1d7865-044a-4a10-8c2d-0e0e8b747e62",
       "name": "prePublishAuto",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2400,
         600
@@ -1344,10 +1344,10 @@
       "parameters": {
         "jsCode": "// deprecated \u2014 use captionAnthropic \u2192 captionGroq \u2192 captionGemini HTTP chain\nreturn $input.all();"
       },
-      "id": "680aa6f5-f983-49f6-b70e-6d2c027e4d45",
+      "id": "8b4ac74e-cca0-46b4-a6ca-cdf11168583a",
       "name": "generateCaptionWithFallback",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1740,
         520
@@ -1357,10 +1357,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst item = $('prepareSlotWait').first().json;\nconst text = (j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();\nconst provider = j.content ? 'anthropic' : (j.choices ? 'groq' : (j.candidates ? 'gemini' : 'unknown'));\nreturn [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: text.length > 20, rewriteAttempt: 0 } }];\n"
       },
-      "id": "c30f17ec-56cc-47d2-860d-3f828a99d927",
+      "id": "b00edecd-c305-4991-bf71-897be50319ee",
       "name": "extractCaptionFromApi",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         600
@@ -1388,7 +1388,7 @@
           "combinator": "and"
         }
       },
-      "id": "88a6b179-a3ef-458e-9e14-95139f81778a",
+      "id": "4f1ac402-619b-4b0d-9f4f-53c98afce899",
       "name": "checkCaptionGenerated",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1419,7 +1419,7 @@
           "combinator": "and"
         }
       },
-      "id": "4ff126e1-7553-483f-a2b6-a84dd0672eea",
+      "id": "79fe0670-4600-4020-8b64-a415bb7d1476",
       "name": "checkLlmHalt",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1432,10 +1432,10 @@
       "parameters": {
         "jsCode": "\nasync function httpJson(url, options) {\n  const res = await fetch(url, {\n    method: options.method || 'GET',\n    headers: options.headers || {},\n    body: options.body\n      ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body))\n      : undefined,\n  });\n  const text = await res.text();\n  let body;\n  try { body = JSON.parse(text); } catch { body = { raw: text }; }\n  return { status: res.status, body };\n}\n\nasync function callAnthropic(system, user, maxTokens) {\n  const key = $env.ANTHROPIC_API_KEY;\n  if (!key) return { ok: false, provider: 'anthropic', error: 'ANTHROPIC_API_KEY not set' };\n  const r = await httpJson('https://api.anthropic.com/v1/messages', {\n    method: 'POST',\n    headers: {\n      'x-api-key': key,\n      'anthropic-version': '2023-06-01',\n      'content-type': 'application/json',\n    },\n    body: {\n      model: 'claude-haiku-4-5-20251001',\n      max_tokens: maxTokens,\n      system,\n      messages: [{ role: 'user', content: user }],\n    },\n  });\n  const text = r.body?.content?.[0]?.text;\n  if (r.status === 200 && text) return { ok: true, provider: 'anthropic', text };\n  return { ok: false, provider: 'anthropic', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function callGroq(system, user, maxTokens) {\n  const key = $env.GROQ_API_KEY;\n  const model = ($env.GROQ_MODEL || 'llama-3.1-8b-instant').trim();\n  if (!key) return { ok: false, provider: 'groq', error: 'GROQ_API_KEY not set' };\n  const r = await httpJson('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST',\n    headers: {\n      Authorization: 'Bearer ' + key,\n      'Content-Type': 'application/json',\n    },\n    body: {\n      model,\n      max_tokens: maxTokens,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user },\n      ],\n    },\n  });\n  const text = r.body?.choices?.[0]?.message?.content;\n  if (r.status === 200 && text) return { ok: true, provider: 'groq', text };\n  return { ok: false, provider: 'groq', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function callGemini(system, user, maxTokens) {\n  const key = $env.GEMINI_API_KEY;\n  const model = (($env.GEMINI_MODEL || 'gemini-1.5-flash').split(',')[0] || 'gemini-1.5-flash').trim();\n  if (!key) return { ok: false, provider: 'gemini', error: 'GEMINI_API_KEY not set' };\n  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;\n  const r = await httpJson(url, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: {\n      systemInstruction: { parts: [{ text: system }] },\n      contents: [{ role: 'user', parts: [{ text: user }] }],\n      generationConfig: { maxOutputTokens: maxTokens },\n    },\n  });\n  const text = r.body?.candidates?.[0]?.content?.parts?.[0]?.text;\n  if (r.status === 200 && text) return { ok: true, provider: 'gemini', text };\n  return { ok: false, provider: 'gemini', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function llmWithFallback(system, user, maxTokens) {\n  const attempts = [];\n  for (const fn of [callAnthropic, callGroq, callGemini]) {\n    try {\n      const r = await fn(system, user, maxTokens);\n      attempts.push(r);\n      if (r.ok) return { ok: true, text: r.text, provider: r.provider, attempts };\n    } catch (e) {\n      attempts.push({ ok: false, provider: fn.name, error: e.message });\n    }\n  }\n  return { ok: false, attempts };\n}\n\nfunction parseReviewJson(raw) {\n  try {\n    return JSON.parse(String(raw).replace(/```json|```/g, '').trim());\n  } catch {\n    return { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };\n  }\n}\n\nconst REVIEW_SYSTEM = \"You are a strict Facebook page compliance officer. Analyze the caption provided and return ONLY a JSON object with this exact schema: { \\\"approved\\\": true/false, \\\"risk_level\\\": \\\"low\\\"/\\\"medium\\\"/\\\"high\\\", \\\"flags\\\": [], \\\"rewrite_needed\\\": true/false, \\\"reason\\\": \\\"\\\" }. Reject (approved: false) if the caption: contains political candidate endorsements, makes unverified medical claims, includes hate speech or discriminatory language, mentions violence approvingly, contains profanity, reveals it was AI-generated, uses prohibited words ('crucial','delve','groundbreaking','game-changer'), or could get the page flagged under Meta Community Standards. Set risk_level to 'high' if any flag is critical. Output only valid JSON, no markdown, no explanation.\";\nconst item = $input.first().json;\nconst result = await llmWithFallback(REVIEW_SYSTEM, 'Review this caption: ' + item.caption, 200);\n\nif (!result.ok) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'ALL_LLM_REVIEW_PROVIDERS_FAILED';\n  return [{\n    json: {\n      ...item,\n      captionGenerated: false,\n      haltReason: 'ALL_LLM_REVIEW_PROVIDERS_FAILED',\n      failureSummary: 'Claude, Groq, and Gemini all failed for compliance review.',\n      failures: result.attempts,\n      stopServerRecommended: true,\n    },\n  }];\n}\n\nconst review = parseReviewJson(result.text);\nreturn [{\n  json: {\n    ...item,\n    review,\n    reviewProvider: result.provider,\n  },\n}];\n"
       },
-      "id": "a34ac890-a1e9-49eb-9b83-c9fbfce74803",
+      "id": "aa7d9802-c2aa-434a-94b2-e8b813afa773",
       "name": "prePublishReviewWithFallback",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2180,
         600
@@ -1445,10 +1445,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nif (!item.review || item.review.approved !== true || item.review.risk_level === 'high') {\n  return [{ json: { ...item, aiCaptionApproved: false, publishBlockedReason: 'CAPTION_REVIEW_NOT_APPROVED' } }];\n}\nreturn [{\n  json: {\n    ...item,\n    aiCaptionApproved: true,\n    aiCaptionReviewAt: new Date().toISOString(),\n    prePublishReviewPassed: true,\n  }\n}];\n"
       },
-      "id": "700d88ec-85a6-4a56-98db-8211b7699a49",
+      "id": "745e5103-3718-4e74-a1ad-90e159f43506",
       "name": "markCaptionReviewPassed",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2620,
         660
@@ -1476,7 +1476,7 @@
           "combinator": "and"
         }
       },
-      "id": "e487dc72-b3e0-4c7f-87b4-05f9eca82150",
+      "id": "ddbd3960-6167-44a9-840b-ef85d3448538",
       "name": "captionReviewReadyGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1516,7 +1516,7 @@
           "combinator": "and"
         }
       },
-      "id": "2185fb02-5c97-4a96-95c8-bb5bfb621e7d",
+      "id": "48d4ac0b-e650-4ac2-a921-e0bebf9fff00",
       "name": "reviewGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1529,10 +1529,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst attempt = (item.rewriteAttempt || 0) + 1;\nconst staticData = $getWorkflowStaticData('global');\nstaticData.rewriteAttempts[item.url] = attempt;\nreturn [{ json: { ...item, rewriteAttempt: attempt } }];\n"
       },
-      "id": "90b8b9d7-6426-4cd8-ac4a-bcab7ee2b0a6",
+      "id": "e01bf65c-d599-48ac-ad7c-5bf2bd921661",
       "name": "incrementRewriteAttempt",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2620,
         720
@@ -1560,7 +1560,7 @@
           "combinator": "and"
         }
       },
-      "id": "69e550f6-bd59-4adc-9635-c55fd1034652",
+      "id": "f3a89899-09fc-47df-b106-7475b903eb41",
       "name": "checkRewriteAttempts",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1573,10 +1573,10 @@
       "parameters": {
         "jsCode": "\nasync function httpJson(url, options) {\n  const res = await fetch(url, {\n    method: options.method || 'GET',\n    headers: options.headers || {},\n    body: options.body\n      ? (typeof options.body === 'string' ? options.body : JSON.stringify(options.body))\n      : undefined,\n  });\n  const text = await res.text();\n  let body;\n  try { body = JSON.parse(text); } catch { body = { raw: text }; }\n  return { status: res.status, body };\n}\n\nasync function callAnthropic(system, user, maxTokens) {\n  const key = $env.ANTHROPIC_API_KEY;\n  if (!key) return { ok: false, provider: 'anthropic', error: 'ANTHROPIC_API_KEY not set' };\n  const r = await httpJson('https://api.anthropic.com/v1/messages', {\n    method: 'POST',\n    headers: {\n      'x-api-key': key,\n      'anthropic-version': '2023-06-01',\n      'content-type': 'application/json',\n    },\n    body: {\n      model: 'claude-haiku-4-5-20251001',\n      max_tokens: maxTokens,\n      system,\n      messages: [{ role: 'user', content: user }],\n    },\n  });\n  const text = r.body?.content?.[0]?.text;\n  if (r.status === 200 && text) return { ok: true, provider: 'anthropic', text };\n  return { ok: false, provider: 'anthropic', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function callGroq(system, user, maxTokens) {\n  const key = $env.GROQ_API_KEY;\n  const model = ($env.GROQ_MODEL || 'llama-3.1-8b-instant').trim();\n  if (!key) return { ok: false, provider: 'groq', error: 'GROQ_API_KEY not set' };\n  const r = await httpJson('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST',\n    headers: {\n      Authorization: 'Bearer ' + key,\n      'Content-Type': 'application/json',\n    },\n    body: {\n      model,\n      max_tokens: maxTokens,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user },\n      ],\n    },\n  });\n  const text = r.body?.choices?.[0]?.message?.content;\n  if (r.status === 200 && text) return { ok: true, provider: 'groq', text };\n  return { ok: false, provider: 'groq', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function callGemini(system, user, maxTokens) {\n  const key = $env.GEMINI_API_KEY;\n  const model = (($env.GEMINI_MODEL || 'gemini-1.5-flash').split(',')[0] || 'gemini-1.5-flash').trim();\n  if (!key) return { ok: false, provider: 'gemini', error: 'GEMINI_API_KEY not set' };\n  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + key;\n  const r = await httpJson(url, {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: {\n      systemInstruction: { parts: [{ text: system }] },\n      contents: [{ role: 'user', parts: [{ text: user }] }],\n      generationConfig: { maxOutputTokens: maxTokens },\n    },\n  });\n  const text = r.body?.candidates?.[0]?.content?.parts?.[0]?.text;\n  if (r.status === 200 && text) return { ok: true, provider: 'gemini', text };\n  return { ok: false, provider: 'gemini', error: JSON.stringify(r.body).slice(0, 300) };\n}\n\nasync function llmWithFallback(system, user, maxTokens) {\n  const attempts = [];\n  for (const fn of [callAnthropic, callGroq, callGemini]) {\n    try {\n      const r = await fn(system, user, maxTokens);\n      attempts.push(r);\n      if (r.ok) return { ok: true, text: r.text, provider: r.provider, attempts };\n    } catch (e) {\n      attempts.push({ ok: false, provider: fn.name, error: e.message });\n    }\n  }\n  return { ok: false, attempts };\n}\n\nfunction parseReviewJson(raw) {\n  try {\n    return JSON.parse(String(raw).replace(/```json|```/g, '').trim());\n  } catch {\n    return { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };\n  }\n}\n\nconst CAPTION_SYSTEM = \"You are a professional US social media editor for a Facebook news Page focused ONLY on American politics and celebrities. Your audience is US adults 25\\u201345 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: (1) open with a strong hook tied to US political or celebrity culture, (2) summarize the story in 1\\u20132 plain conversational sentences, (3) end with a thought-provoking question inviting Americans to comment, (4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), (5) include exactly 1\\u20132 emojis placed naturally in the caption (not more than two; match the story mood). Match tone to the story: informative, surprising, opinionated, or empathetic. Skip stories that are not politics or celebrity-related. Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text.\";\nconst item = $input.first().json;\nconst userPrompt = 'Rewrite this Facebook caption fixing these issues: ' + JSON.stringify(item.review?.flags || [])\n  + '. Original caption: ' + item.caption + '. Article title: ' + item.title;\n\nconst result = await llmWithFallback(CAPTION_SYSTEM, userPrompt, 350);\nconst staticData = $getWorkflowStaticData('global');\n\nif (!result.ok) {\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'ALL_LLM_CAPTION_PROVIDERS_FAILED';\n  return [{\n    json: {\n      ...item,\n      captionGenerated: false,\n      haltReason: 'ALL_LLM_CAPTION_PROVIDERS_FAILED',\n      failureSummary: 'All LLM providers failed during caption rewrite.',\n      failures: result.attempts,\n      stopServerRecommended: true,\n    },\n  }];\n}\n\nreturn [{\n  json: {\n    ...item,\n    caption: result.text.trim(),\n    captionProvider: result.provider,\n    captionGenerated: true,\n  },\n}];\n"
       },
-      "id": "c0ba78bd-e45f-4952-9a9b-6ec935074f46",
+      "id": "c73af9dc-9809-4123-a31e-059162de95fb",
       "name": "rewriteCaptionWithFallback",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3060,
         720
@@ -1586,10 +1586,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'reviewGate',\n  error_code: 'SKIPPED_COMPLIANCE',\n  error_message: $input.first().json.review?.reason || 'Compliance rejection after max retries',\n  article_url: $input.first().json.url,\n});\nif (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);\nreturn [{ json: { skipped: true, reason: 'SKIPPED_COMPLIANCE', url: $input.first().json.url } }];\n"
       },
-      "id": "b1467037-2449-43d7-832a-d0c52a4c5c8b",
+      "id": "0f2da8df-f60f-4e56-ad64-dc1e47b2ebfb",
       "name": "logSkippedCompliance",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3280,
         840
@@ -1599,10 +1599,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst topic = item._topic || 'news';\nconst imagePrompt = `Photorealistic candid US ${topic} news photograph about: ${item.title}. Natural unstaged moment, real people and environments, soft daylight, shallow depth of field, looks like a professional press photo taken on location \u2014 not AI art, not illustration. Consistent brand color grading on every post: warm golden yellow highlights, rich red accents, and deep green tones in clothing, decor, lighting, or background. Cohesive yellow-red-green palette across the frame. Authentic Facebook news Page aesthetic, relatable and human. NO text, NO logos, NO watermarks, NO signs with words, NO graphic design layout, NO cartoon, NO embedded emoji characters painted in the image.`;\nreturn [{ json: { ...item, imagePrompt } }];\n"
       },
-      "id": "cc503eb3-39c5-4398-97e4-e939e5532b13",
+      "id": "fcbb9d05-f337-4748-8371-fd4d0776f4c8",
       "name": "buildImagePrompt",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         2840,
         600
@@ -1633,7 +1633,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 200, system: \"You are an image compliance officer for a US Facebook news page. You will receive an image generation prompt. Return ONLY JSON: { \\'approved\\': true/false, \\'reason\\': \\'\\' }. Reject if the prompt could produce: graphic violence, nudity, identifiable real people in compromising situations, political propaganda imagery, or anything violating Meta\\'s image policies. Output only valid JSON.\", messages: [{ role: \"user\", content: \"Review this image generation prompt: \" + $json.imagePrompt }] }) }}"
       },
-      "id": "368161a2-9850-4a31-b466-6e3a07cd7395",
+      "id": "b1dd5fa3-99eb-4ebd-82f8-0b1c691f1b4c",
       "name": "imageReview",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1650,10 +1650,10 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet review;\ntry {\n  review = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch {\n  review = { approved: false, reason: 'Invalid JSON from image reviewer' };\n}\nconst prev = $('buildImagePrompt').first().json;\nreturn [{ json: { ...prev, imageReview: review } }];\n"
       },
-      "id": "51e75388-c8b7-45bf-a62c-f43a9523a62b",
+      "id": "177b5ebf-ad4a-40e8-836f-25a7358353c2",
       "name": "parseImageReview",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3280,
         600
@@ -1681,7 +1681,7 @@
           "combinator": "and"
         }
       },
-      "id": "af36b245-3961-41f1-bac0-7a3422321774",
+      "id": "9e1ee6e6-48d4-416e-af59-f7f5526a3c5a",
       "name": "imageReviewGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1711,7 +1711,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"gpt-image-1\", quality: \"high\", size: \"1536x1024\", n: 1, prompt: $json.imagePrompt || (\"Photorealistic candid US news photo: \" + $json.title + \". Photorealistic candid US news photo, natural unstaged lighting, cohesive brand colors: warm yellow highlights, red accents, deep green tones. Authentic press-photo feel, NOT illustration, NO text, NO logos, NO watermarks, NO emoji characters in the image.\") }) }}"
       },
-      "id": "bb440c6f-8330-4437-85f6-04e0f91f9ac3",
+      "id": "55f3e530-0dc9-4048-95e9-5a8ef71ea896",
       "name": "generateImage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1728,10 +1728,10 @@
       "parameters": {
         "jsCode": "const item = $('buildImagePrompt').first().json;\nconst response = $input.first().json;\nconst aiUrl = response.data?.[0]?.url || '';\nreturn [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageSource: 'openai_generated' } }];\n"
       },
-      "id": "9b4ad667-4896-4d8b-997d-4c7dacff8de5",
+      "id": "b9f8544d-3a1a-4ada-bb4c-c8669d751628",
       "name": "extractImageUrl",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3940,
         600
@@ -1741,10 +1741,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst base = $('buildImagePrompt').first().json;\nconst item = { ...base, ...($input.first().json || {}) };\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'imageReviewGate',\n  error_code: 'IMAGE_FALLBACK_USED',\n  error_message: item.imageReview?.reason || 'Image review skipped or rejected',\n  article_url: item.url,\n});\nreturn [{ json: { ...item, useFallbackImage: true, finalImageUrl: item.urlToImage, imageSource: 'newsapi_fallback' } }];\n"
       },
-      "id": "aef5b3c2-3800-4bb5-9b20-88bb9a3162d9",
+      "id": "6df471b0-f5f6-4bb9-ae6a-bcb4f1a2f655",
       "name": "applyImageFallback",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3720,
         720
@@ -1754,10 +1754,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nconst cleared = !!(item.finalImageUrl && (item.imageReview?.approved === true || item.useFallbackImage === true));\nreturn [{\n  json: {\n    ...item,\n    aiImageCleared: cleared,\n    aiImageReviewAt: new Date().toISOString(),\n  }\n}];\n"
       },
-      "id": "edf7476a-9aee-4c5e-94df-9cd0f8032647",
+      "id": "202b0c6d-f00d-4443-a0a8-ea28a53a2eb6",
       "name": "mergeImagePaths",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         4160,
         600
@@ -1821,7 +1821,7 @@
           "combinator": "and"
         }
       },
-      "id": "9961751d-a879-4a57-b455-58e2f141a784",
+      "id": "a05428c8-44a6-4c68-ac1f-5b3136711e1b",
       "name": "finalPublishGate",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1834,10 +1834,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst item = $input.first().json;\nstaticData.errorLog = staticData.errorLog || [];\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'finalPublishGate',\n  error_code: 'PUBLISH_BLOCKED_MISSING_REVIEW',\n  error_message: item.publishBlockedReason || 'Mandatory AI review layers not satisfied',\n  article_url: item.url,\n});\nreturn [{ json: { skipped: true, reason: 'PUBLISH_BLOCKED_MISSING_REVIEW', url: item.url } }];\n"
       },
-      "id": "185c583c-167e-4b2e-bc54-8539fc6ea800",
+      "id": "c295ab36-56e4-4e34-b892-9a2545a76eb3",
       "name": "logBlockedPublish",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         4380,
         720
@@ -1861,7 +1861,7 @@
           ]
         }
       },
-      "id": "d6eda4e3-722c-4f05-8eb7-e31e1db6307f",
+      "id": "6f934552-88f7-4158-8a3f-52b834d6be05",
       "name": "slotApiGateAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1875,10 +1875,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst healthy = (Array.isArray(j.data) || j.model) && !j.error;\nconst staticData = $getWorkflowStaticData('global');\nif (!healthy) {\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'Anthropic API failed mid-slot \u2014 reviewer unavailable';\n}\nconst item = $('parseFBToken').first().json;\nreturn [{ json: { ...item, slotAnthropicHealthy: healthy } }];\n"
       },
-      "id": "1f26d316-d3ca-4b3b-adb5-024736939eb2",
+      "id": "6b9d3801-f106-429d-927e-310bffae8d58",
       "name": "evaluateSlotAnthropic",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1960,
         300
@@ -1906,7 +1906,7 @@
           "combinator": "and"
         }
       },
-      "id": "514d5260-21e7-491f-bf50-4d98f4abd374",
+      "id": "bfbdc28b-2850-4dee-b24a-0beafbe1b239",
       "name": "slotAnthropicPass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -1929,7 +1929,7 @@
           ]
         }
       },
-      "id": "41bfd9f8-afb1-4d21-a892-bdb1427b216d",
+      "id": "8d01e4a6-b2d5-4d08-89f2-1d1068accd3a",
       "name": "slotApiGateOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -1943,10 +1943,10 @@
       "parameters": {
         "jsCode": "const j = $input.first().json;\nconst healthy = (j.object === 'list' || Array.isArray(j.data)) && !j.error;\nconst staticData = $getWorkflowStaticData('global');\nif (!healthy) {\n  staticData.productionHalted = true;\n  staticData.productionHaltReason = 'OpenAI API failed mid-slot \u2014 image generation unavailable';\n}\nconst item = $('markCaptionReviewPassed').first().json;\nreturn [{ json: { ...item, slotOpenAIHealthy: healthy } }];\n"
       },
-      "id": "0a2dbd78-d493-4922-833d-ac7d5ce6413e",
+      "id": "36809e01-6499-4005-9ef6-e0653626f4c2",
       "name": "evaluateSlotOpenAI",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3720,
         660
@@ -1974,7 +1974,7 @@
           "combinator": "and"
         }
       },
-      "id": "4e0fe7a8-28eb-4220-b23b-88949a67540d",
+      "id": "d1c5947a-1803-44ad-9d3c-42b20a1fbe3e",
       "name": "slotOpenAIPass",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -2006,7 +2006,7 @@
           ]
         }
       },
-      "id": "06b489d2-be1a-400e-891e-bfe4c3fb3703",
+      "id": "bca512ee-fe6d-45ba-b45a-d206a35479cb",
       "name": "publishToFacebook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2018,12 +2018,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst response = $input.first().json;\nconst item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;\nconst postId = response.id || response.post_id || '';\npipelineLog('PUBLISH_OK postId=' + postId + ' title=' + (item.title || '').slice(0, 50));\nreturn [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const response = $input.first().json;\nconst item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;\nconst postId = response.id || response.post_id || '';\nconst __sdP=$getWorkflowStaticData('global');\n(__sdP.pipelineLog=__sdP.pipelineLog||[]).push('PUBLISH_OK postId='+postId);\nconsole.log('[PIPELINE] PUBLISH_OK', postId);\nreturn [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];\n"
       },
-      "id": "a50c665b-eda5-4a2a-bfb5-6c4162ddbb8a",
+      "id": "148875aa-0f7e-4557-9075-faa4b82247f0",
       "name": "handlePublishSuccess",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         420,
         1200
@@ -2031,12 +2031,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nstaticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;\nstaticData.errorLog = staticData.errorLog || [];\nlet ctx = {};\ntry { ctx = $('mergeImagePaths').first().json; } catch (e) {}\nconst err = $input.first().json;\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'publishToFacebook',\n  error_code: err.error?.statusCode || 'FB_ERROR',\n  error_message: err.error?.message || JSON.stringify(err),\n  article_url: ctx.url || 'unknown',\n});\nif (staticData.consecutiveFailures > 4) {\n  staticData.circuitBreakerHalted = true;\n}\nif (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);\npipelineLog('PUBLISH_FAIL ' + (err.error?.message || JSON.stringify(err)).slice(0, 200));\nreturn [{ json: { ...ctx, ...err, publishSuccess: false, consecutiveFailures: staticData.consecutiveFailures } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;\nstaticData.errorLog = staticData.errorLog || [];\nlet ctx = {};\ntry { ctx = $('mergeImagePaths').first().json; } catch (e) {}\nconst err = $input.first().json;\nstaticData.errorLog.push({\n  timestamp: new Date().toISOString(),\n  node_name: 'publishToFacebook',\n  error_code: err.error?.statusCode || 'FB_ERROR',\n  error_message: err.error?.message || JSON.stringify(err),\n  article_url: ctx.url || 'unknown',\n});\nif (staticData.consecutiveFailures > 4) {\n  staticData.circuitBreakerHalted = true;\n}\nif (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);\nconst __sdPf=$getWorkflowStaticData('global');\n(__sdPf.pipelineLog=__sdPf.pipelineLog||[]).push('PUBLISH_FAIL');\nreturn [{ json: { ...ctx, ...err, publishSuccess: false, consecutiveFailures: staticData.consecutiveFailures } }];\n"
       },
-      "id": "eb21c654-bcdb-4112-bd5a-002fba22865d",
+      "id": "ce90ca94-b6ed-4cf8-832b-73da7aeee798",
       "name": "handlePublishError",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         420,
         1320
@@ -2049,7 +2049,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "35cc49d0-d48b-456b-9116-3b8b28e63595",
+      "id": "901c55b7-67d3-4f00-b9ee-b073b87e4fe7",
       "name": "emailCircuitBreaker",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -2088,7 +2088,7 @@
           "combinator": "and"
         }
       },
-      "id": "1065eb69-2a44-4324-909b-f5d805417d6e",
+      "id": "429d9046-1f28-4258-8c94-3195355eab5e",
       "name": "checkCircuitAfterError",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -2122,7 +2122,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"claude-haiku-4-5-20251001\", max_tokens: 300, system: \"You are a social media audit bot. Given a published Facebook post\\'s data, return ONLY JSON: { \\'post_id\\': \\'\\', \\'timestamp_et\\': \\'\\', \\'category\\': \\'\\', \\'tone\\': \\'\\', \\'compliance_status\\': \\'clean\\'/\\'flagged\\', \\'quality_score\\': 1-10, \\'notes\\': \\'\\' }. Score quality 1\u201310 based on: hook strength, audience relevance, question quality, hashtag relevance. Flag if anything looks risky in retrospect.\", messages: [{ role: \"user\", content: \"Audit this post. Caption: \" + $json.caption + \". Image prompt: \" + $json.imagePrompt + \". Post ID: \" + $json.post_id + \". Timestamp: \" + $json.publishTimestamp }] }) }}"
       },
-      "id": "bb9489b5-f2b6-4774-9973-8d8c2b1a96cf",
+      "id": "dd87f834-13da-4ca5-9706-bdef360296be",
       "name": "postPublishAudit",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2139,10 +2139,10 @@
       "parameters": {
         "jsCode": "const raw = $input.first().json.content?.[0]?.text || '{}';\nlet audit;\ntry {\n  audit = JSON.parse(raw.replace(/```json|```/g, '').trim());\n} catch {\n  audit = { compliance_status: 'flagged', quality_score: 0, notes: 'Audit parse error' };\n}\nconst prev = $('handlePublishSuccess').first().json;\nreturn [{ json: { ...prev, audit } }];\n"
       },
-      "id": "87c05bb0-781f-4819-892a-0508ad78ff6c",
+      "id": "34d59b6c-2911-43d7-b7c8-1e2e2d39ec81",
       "name": "parsePostPublishAudit",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         860,
         1200
@@ -2152,10 +2152,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.auditLog = staticData.auditLog || [];\nconst item = $input.first().json;\nstaticData.auditLog.push({\n  ...item.audit,\n  post_id: item.post_id,\n  article_url: item.url,\n  timestamp: item.publishTimestamp,\n  imageSource: item.imageSource,\n});\nif (staticData.auditLog.length > 100) staticData.auditLog = staticData.auditLog.slice(-100);\nstaticData.dailyAuditArchive = staticData.dailyAuditArchive || [];\nstaticData.dailyAuditArchive.push(staticData.auditLog[staticData.auditLog.length - 1]);\nreturn [{ json: item }];\n"
       },
-      "id": "ccb2d628-4f03-4aa4-8b88-4a5a33cdcc4c",
+      "id": "0eca1a73-929d-4817-a9ce-2389db654451",
       "name": "appendAuditLog",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1080,
         1200
@@ -2183,7 +2183,7 @@
           "combinator": "and"
         }
       },
-      "id": "23c81e09-7097-4588-be89-5df1473eff29",
+      "id": "9e53242c-e871-4518-8d5e-636c67d7d80c",
       "name": "checkFlaggedAudit",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -2196,10 +2196,10 @@
       "parameters": {
         "jsCode": "const item = $input.first().json;\nreturn [{\n  json: {\n    ...item,\n    emailSubject: `[US News Bot] FLAGGED post \u2014 review required (ID ${item.post_id})`,\n    emailBody: `Post-publish AI audit flagged this post.\\n\\nPost ID: ${item.post_id}\\nTitle: ${item.title}\\nQuality score: ${item.audit?.quality_score}\\nNotes: ${item.audit?.notes || ''}\\n\\nReview on Facebook and delete if necessary.`,\n  }\n}];\n"
       },
-      "id": "c42ea274-c275-437d-8cf4-528d55f0618a",
+      "id": "5415c941-b51b-4872-a32a-30d1f2b5aa0d",
       "name": "prepareFlaggedPostEmail",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1740,
         1320
@@ -2212,7 +2212,7 @@
         "subject": "={{ $json.emailSubject }}",
         "text": "={{ $json.emailBody }}"
       },
-      "id": "1d5b9948-cb5b-4df5-ae24-7cb84daa0381",
+      "id": "81cdc657-2946-449d-996f-3bc1be00860d",
       "name": "emailFlaggedPost",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -2233,10 +2233,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.postedURLs = staticData.postedURLs || [];\nconst url = $input.first().json.url;\nif (url && !staticData.postedURLs.includes(url)) {\n  staticData.postedURLs.push(url);\n}\nif (staticData.postedURLs.length > 200) {\n  staticData.postedURLs = staticData.postedURLs.slice(-200);\n}\nstaticData.consecutiveFailures = 0;\nreturn [{ json: { updated: true, url } }];\n"
       },
-      "id": "d0ba3bf8-bd21-41d4-bead-f425caa11e79",
+      "id": "5fd04a9d-4962-4c13-8d33-2ea8673d9abf",
       "name": "updatePostedURLs",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         1520,
         1200
@@ -2244,7 +2244,7 @@
     },
     {
       "parameters": {},
-      "id": "302304d3-c3d7-496d-9c75-f982b6aa6ae1",
+      "id": "7170eb5f-303c-4b36-b4d9-ba0724aec61a",
       "name": "loopBack",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -2265,7 +2265,7 @@
         },
         "timezone": "America/New_York"
       },
-      "id": "a057fc32-a7c6-4833-b69a-215c78d61c37",
+      "id": "b5f59a32-468c-4ca8-b8bd-d07160b827aa",
       "name": "scheduleTrigger11PM",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -2278,10 +2278,10 @@
       "parameters": {
         "jsCode": "const { DateTime } = require('luxon');\nconst staticData = $getWorkflowStaticData('global');\nconst auditLog = staticData.auditLog || [];\nconst errorLog = staticData.errorLog || [];\nconst today = DateTime.now().setZone('America/New_York').toFormat('yyyy-MM-dd');\n\nconst skipped = errorLog.filter(e => e.error_code === 'SKIPPED_COMPLIANCE').length;\nconst fallbacks = errorLog.filter(e => e.error_code === 'IMAGE_FALLBACK_USED').length;\nconst published = auditLog.filter(a => a.compliance_status).length;\nconst flagged = auditLog.filter(a => a.compliance_status === 'flagged');\nconst scores = auditLog.map(a => a.quality_score).filter(s => typeof s === 'number');\nconst avgScore = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : 'N/A';\n\nconst report = `Facebook US News Daily Report \u2014 ${today}\n========================================\nTotal posts attempted: ${auditLog.length + skipped}\nTotal published: ${published}\nTotal skipped (compliance): ${skipped}\nTotal image fallbacks: ${fallbacks}\nAverage quality score: ${avgScore}\nFlagged posts: ${flagged.length}\n${flagged.length ? 'Flagged details: ' + JSON.stringify(flagged) : ''}\n========================================`;\n\nstaticData.dailyReports = staticData.dailyReports || [];\nstaticData.dailyReports.push({ date: today, report });\nif (staticData.dailyReports.length > 7) staticData.dailyReports = staticData.dailyReports.slice(-7);\n\nconst archived = staticData.dailyAuditArchive || [];\nstaticData.auditLog = [];\n\nreturn [{ json: { report, date: today, reportPath: `/data/reports/daily_${today}.txt` } }];\n"
       },
-      "id": "a4757755-1e5a-4e83-ba4e-a8374761b5bc",
+      "id": "9385bf58-9760-42fe-8e14-fb48514e8940",
       "name": "dailySummary",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         420,
         1500
@@ -2294,7 +2294,7 @@
         "subject": "={{ 'Facebook US News Daily Report \u2014 ' + $json.date }}",
         "text": "={{ $json.report }}"
       },
-      "id": "ed164ec1-c465-491e-a541-a183ae150a8b",
+      "id": "93385584-2bf2-4ed6-b1bb-32f1ccc76d0b",
       "name": "sendDailyReport",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -2315,10 +2315,10 @@
       "parameters": {
         "jsCode": "const fs = require('fs');\nconst path = '/data/reports';\ntry { fs.mkdirSync(path, { recursive: true }); fs.writeFileSync(`${path}/daily_${$json.date}.txt`, $json.report); } catch(e) { /* docker volume may differ */ }\nreturn [$input.first()];"
       },
-      "id": "18d46284-8128-4052-b9ce-ab3c20ee89b3",
+      "id": "1126a11f-824d-4400-98b1-d0ba0aedefc5",
       "name": "writeDailyReportFile",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         860,
         1500
@@ -2331,7 +2331,7 @@
         "responseMode": "onReceived",
         "responseData": "noData"
       },
-      "id": "b8e5b891-665a-4110-9701-1dce89cd6ff5",
+      "id": "cd17740a-7115-4f1f-8deb-c1a6e6bf6c11",
       "name": "webhookTrigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -2343,12 +2343,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nstaticData.pipelineLog = [];\npipelineLog('BUILD=2026-05-30-trace-v5 webhook test-one started (gate bypassed)');\nstaticData.webhookBypassGate = true;\nstaticData.todaySchedule = [{\n  slotIndex: 1,\n  epochMs: Date.now() + 1000,\n  windowLabel: 'test_one',\n  scheduledEt: 'now',\n}];\nstaticData.singleSlotTest = true;\nstaticData.forcePostTest = true;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nreturn [{ json: { command: 'test-one', mode: 'single_slot', build: '2026-05-30-trace-v5' } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.pipelineLog = ['BUILD=2026-05-30-trace-v6-fix webhookSetup'];\nstaticData.webhookBypassGate = true;\nstaticData.todaySchedule = [{\n  slotIndex: 1,\n  epochMs: Date.now() + 1000,\n  windowLabel: 'test_one',\n  scheduledEt: 'now',\n}];\nstaticData.singleSlotTest = true;\nstaticData.forcePostTest = true;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nconsole.log('[PIPELINE] webhookSetup 2026-05-30-trace-v6-fix');\nreturn [{ json: { command: 'test-one', mode: 'single_slot', build: '2026-05-30-trace-v6-fix' } }];\n"
       },
-      "id": "435d1782-45cb-40e5-8e4b-ca3dacf16104",
+      "id": "eccc4b46-89a9-4369-9704-c6913ce2371a",
       "name": "webhookSetup",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3020,
         -200
@@ -2358,7 +2358,7 @@
       "parameters": {
         "notice": "Enter /auto command in workflow notes or use paired Set node. Commands: run-now, test-one, review-log, check-token, pause, resume, flush-cache, daily-report, health-check, reset-errors"
       },
-      "id": "77dcb131-6774-4380-80e6-d4f0122f236a",
+      "id": "92734f34-bde1-4f73-b390-a25b5e78e52d",
       "name": "manualTrigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -2382,7 +2382,7 @@
           ]
         }
       },
-      "id": "dcf6b0a7-9571-4c10-8437-e90a34787f2f",
+      "id": "0ec82796-7083-4d43-b657-7db78dcf96fc",
       "name": "setAutoCommand",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -2551,7 +2551,7 @@
           "fallbackOutput": "extra"
         }
       },
-      "id": "6e265d25-ea2f-4ac4-9dae-772906886837",
+      "id": "ad9260be-6d5e-49bc-90e3-b9aca829afab",
       "name": "commandRouter",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
@@ -2564,10 +2564,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst { DateTime } = require('luxon');\nconst now = DateTime.now().setZone('America/New_York');\nconst schedule = [];\nfor (let i = 0; i < 10; i++) {\n  schedule.push({\n    slotIndex: i + 1,\n    epochMs: now.plus({ minutes: i * 5 }).toMillis(),\n    windowLabel: 'manual_run',\n    scheduledEt: now.plus({ minutes: i * 5 }).toFormat('HH:mm'),\n  });\n}\nstaticData.todaySchedule = schedule;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nreturn [{ json: { command: 'run-now', todaySchedule: schedule } }];\n"
       },
-      "id": "0bb3499f-8fc6-4a7e-a074-503dc21ec7bf",
+      "id": "09de6464-ea2c-403c-8401-7e73cd19a0ab",
       "name": "autoRunNow",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         -100
@@ -2575,12 +2575,12 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction pipelineLog(msg) {\n  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';\n  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;\n  console.log('[PIPELINE] ' + line);\n  const sd = $getWorkflowStaticData('global');\n  sd.pipelineLog = sd.pipelineLog || [];\n  sd.pipelineLog.push(line);\n  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);\n}\n\ntry {\nconst staticData = $getWorkflowStaticData('global');\nstaticData.pipelineLog = [];\npipelineLog('BUILD=2026-05-30-trace-v5 webhook test-one started (gate bypassed)');\nstaticData.webhookBypassGate = true;\nstaticData.todaySchedule = [{\n  slotIndex: 1,\n  epochMs: Date.now() + 1000,\n  windowLabel: 'test_one',\n  scheduledEt: 'now',\n}];\nstaticData.singleSlotTest = true;\nstaticData.forcePostTest = true;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nreturn [{ json: { command: 'test-one', mode: 'single_slot', build: '2026-05-30-trace-v5' } }];\n} catch (fatal) {\n  pipelineLog('FATAL [code]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n  return [{ json: { __fatalCodeError: true, node: 'code', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n}\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.pipelineLog = ['BUILD=2026-05-30-trace-v6-fix webhookSetup'];\nstaticData.webhookBypassGate = true;\nstaticData.todaySchedule = [{\n  slotIndex: 1,\n  epochMs: Date.now() + 1000,\n  windowLabel: 'test_one',\n  scheduledEt: 'now',\n}];\nstaticData.singleSlotTest = true;\nstaticData.forcePostTest = true;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nconsole.log('[PIPELINE] webhookSetup 2026-05-30-trace-v6-fix');\nreturn [{ json: { command: 'test-one', mode: 'single_slot', build: '2026-05-30-trace-v6-fix' } }];\n"
       },
-      "id": "4df30dda-6406-4f83-97a7-32ced849f25e",
+      "id": "5d6dc4b3-b08b-4f03-9242-c3e048337906",
       "name": "autoTestOne",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         0
@@ -2590,10 +2590,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst log = staticData.auditLog || [];\nconsole.log('AUDIT LOG:', JSON.stringify(log, null, 2));\nreturn [{ json: { command: 'review-log', auditLog: log } }];\n"
       },
-      "id": "8c8cc02f-ad5c-4cc5-b681-e7e69734997f",
+      "id": "8aea9aa5-0e3f-4e32-9e58-fade016cbcfc",
       "name": "autoReviewLog",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         100
@@ -2603,10 +2603,10 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'check-token', runTokenCheck: true } }];\n"
       },
-      "id": "31c91af7-28b2-4dd2-abe1-d5abeb59806d",
+      "id": "b13212fd-5e92-457a-b938-2aad8542ebec",
       "name": "autoCheckToken",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         200
@@ -2616,10 +2616,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.postedURLs = [];\nreturn [{ json: { command: 'flush-cache', flushed: true } }];\n"
       },
-      "id": "a7b5ec0d-8561-4f60-99ce-651221e8a18d",
+      "id": "434f80ac-49e6-47b0-81d7-365f1b95477e",
       "name": "autoFlushCache",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         300
@@ -2629,10 +2629,10 @@
       "parameters": {
         "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.errorLog = [];\nstaticData.consecutiveFailures = 0;\nstaticData.circuitBreakerHalted = false;\nstaticData.productionHalted = false;\nstaticData.apisHealthy = null;\nstaticData.lastApiGateFailures = [];\nreturn [{ json: { command: 'reset-errors', cleared: true } }];\n"
       },
-      "id": "0008c7b9-012d-4ca8-9eda-873ea956618c",
+      "id": "7250db2f-d8c2-4422-8b69-f2cd6098d780",
       "name": "autoResetErrors",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         400
@@ -2642,10 +2642,10 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'health-check', pingApis: true } }];\n"
       },
-      "id": "3a9ec210-fb6c-47a9-889a-33139146b284",
+      "id": "a7c6c9ee-1b4c-43c2-af8f-7667807061df",
       "name": "autoHealthCheck",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         500
@@ -2655,10 +2655,10 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'pause', note: 'Deactivate workflow in n8n UI to pause scheduling' } }];"
       },
-      "id": "2e12ea6d-ed4e-482e-ac00-3f5fcbb1d39c",
+      "id": "63174f5f-2c06-4230-ace9-9f76c80503e1",
       "name": "autoPause",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         600
@@ -2668,10 +2668,10 @@
       "parameters": {
         "jsCode": "return [{ json: { command: 'resume', note: 'Activate workflow in n8n UI to resume scheduling' } }];"
       },
-      "id": "80e8a1dd-0dff-473e-ac9c-22952e44d5aa",
+      "id": "bc8be0fd-4be6-4f6f-a1b6-014cbaacd6f6",
       "name": "autoResume",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         3460,
         700
@@ -2695,7 +2695,7 @@
           ]
         }
       },
-      "id": "616c835d-6f23-479b-b041-7fa8d0261068",
+      "id": "0b24ff77-9ec7-4839-af2f-e2fbd05a7c44",
       "name": "healthNewsAPI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2723,7 +2723,7 @@
           ]
         }
       },
-      "id": "013951cd-ae77-48eb-96ba-6c04793b90c8",
+      "id": "69f34e4f-e8d5-4be7-a40a-1399f7e91ee7",
       "name": "healthAnthropic",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2747,7 +2747,7 @@
           ]
         }
       },
-      "id": "d5d074b8-3859-4819-8e05-79a285baf437",
+      "id": "463d4ce0-c361-4f75-8d39-4ad7e1fae5d9",
       "name": "healthOpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2775,7 +2775,7 @@
           ]
         }
       },
-      "id": "a99be173-fc6d-41a8-92b2-4fb8b91ea3a0",
+      "id": "63d827ad-2ee0-4301-9856-1f0c3117dd90",
       "name": "healthMeta",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -2789,10 +2789,10 @@
       "parameters": {
         "jsCode": "const results = $input.all().map(i => i.json);\nreturn [{ json: { command: 'health-check', results } }];\n"
       },
-      "id": "3d0ae561-d389-4cf7-ae29-02dc509d4eb5",
+      "id": "f0f72cfa-1b47-4dc2-b67e-a369e6025cf7",
       "name": "healthAggregate",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "typeVersion": 1,
       "position": [
         4560,
         500
@@ -4016,7 +4016,7 @@
   "meta": {
     "templateCredsSetupCompleted": false,
     "instanceId": "facebook-us-news-automation",
-    "workflowBuild": "2026-05-30-trace-v5"
+    "workflowBuild": "2026-05-30-trace-v6-fix"
   },
-  "versionId": "965a95ce-a98e-478d-89ae-916c092c1f85"
+  "versionId": "087011ed-428b-40f6-bec5-b4754703d936"
 }
