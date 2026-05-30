@@ -1419,6 +1419,16 @@ N["writeDailyReportFile"] = add_node(node(
     typeVersion=2,
 ))
 
+# === WEBHOOK TRIGGER (curl-friendly manual trigger) ===
+N["webhookTrigger"] = add_node(node(
+    "webhookTrigger", "n8n-nodes-base.webhook", [X(0) + 2600, Y0 - 200],
+    {"httpMethod": "GET", "path": "trigger-post", "responseMode": "onReceived", "responseData": "allEntries"},
+    typeVersion=2, webhookId="trigger-post",
+))
+N["webhookSetup"] = add_node(node("webhookSetup", "n8n-nodes-base.code", [X(1) + 2600, Y0 - 200], {
+    "jsCode": AUTO_TEST_ONE
+}, typeVersion=2))
+
 # === MANUAL /auto COMMANDS ===
 N["manualTrigger"] = add_node(node(
     "manualTrigger", "n8n-nodes-base.manualTrigger", [X(0) + 2600, Y0],
@@ -1610,6 +1620,10 @@ wire("loopBack", "splitInBatches")
 wire("scheduleTrigger11PM", "dailySummary")
 wire("dailySummary", "sendDailyReport")
 wire("sendDailyReport", "writeDailyReportFile")
+
+# Webhook trigger (curl-friendly)
+wire("webhookTrigger", "webhookSetup")
+wire("webhookSetup", "productionGateNewsAPI")
 
 # Manual /auto commands
 wire("manualTrigger", "setAutoCommand")
