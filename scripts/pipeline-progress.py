@@ -58,7 +58,7 @@ RAW_TRACE_MARKERS = [
     ("mergeNewsFeeds:", "news", "done"),
     ("filterArticles:", "news", "done"),
     ("logMergeStats: items=", "news", "done"),
-    ("route=webhook", "news", "done"),
+    ("gateWebhookPath:", "news", "done"),
     ("pickFirstArticle:", "slot", "done"),
     ("prepareSlotWait: forcePostTest", "slot", "done"),
     ("parseFBToken: valid=false", "token", "failed"),

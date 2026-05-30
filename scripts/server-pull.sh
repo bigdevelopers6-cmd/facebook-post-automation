@@ -11,7 +11,8 @@ git pull origin main
 
 MARKERS=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json || echo 0)
 BUILD=$(grep -o 'workflowBuild[^,}]*' workflow/facebook-us-news-automation.json | head -1 || echo "")
-HAS_V7=$(grep -c 'trace-v7f-route-string' workflow/facebook-us-news-automation.json || echo 0)
+HAS_V7=$(grep -c 'trace-v7g-empty-gate' workflow/facebook-us-news-automation.json || echo 0)
+HAS_GATE=$(grep -c '"name": "gateWebhookPath"' workflow/facebook-us-news-automation.json || echo 0)
 HAS_PICK=$(grep -c '"name": "pickFirstArticle"' workflow/facebook-us-news-automation.json || echo 0)
 HAS_ASSERT=$(grep -c '"name": "assertWebhookPost"' workflow/facebook-us-news-automation.json || echo 0)
 CODE_V1=$(grep -A2 '"name": "webhookSetup"' workflow/facebook-us-news-automation.json | grep -c '"typeVersion": 1' || echo 0)
@@ -20,12 +21,13 @@ echo "After:  $(git rev-parse --short HEAD)"
 echo "pipelineLog function count (want 0): $MARKERS"
 echo "assertWebhookPost node (want >=1): $HAS_ASSERT"
 echo "pickFirstArticle node (want >=1): $HAS_PICK"
+echo "gateWebhookPath node (want >=1): $HAS_GATE"
 echo "webhookSetup typeVersion 1 (want >=1): $CODE_V1"
 echo "meta: $BUILD"
 
 if [ "${HAS_V7:-0}" -lt 1 ]; then
   echo ""
-  echo "[!!] ERROR: Workflow on disk is OLD (need trace-v7f-route-string)."
+  echo "[!!] ERROR: Workflow on disk is OLD (need trace-v7g-empty-gate)."
   echo "     Push from PC, then: bash scripts/server-deploy.sh"
   exit 1
 fi

@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7f-route-string"
+WORKFLOW_BUILD = "2026-05-30-trace-v7g-empty-gate"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -1203,6 +1203,41 @@ if (items.length === 0) {
 return [{ json: { ...items[0].json, webhookTestMode: true, webhookRoute: 'webhook' } }];
 """
 
+# n8n: return [] to skip a branch (no IF node — works when IF expressions fail on this host)
+GATE_WEBHOOK_PATH = r"""const sd = $getWorkflowStaticData('global');
+const items = $input.all();
+if (sd.webhookTestMode !== true) {
+  return [];
+}
+const __sdG=$getWorkflowStaticData('global');
+(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('gateWebhookPath: items='+items.length);
+return items;
+"""
+
+GATE_SCHEDULED_PATH = r"""const sd = $getWorkflowStaticData('global');
+const items = $input.all();
+if (sd.webhookTestMode === true) {
+  return [];
+}
+const __sdG=$getWorkflowStaticData('global');
+(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('gateScheduledPath: items='+items.length);
+return items;
+"""
+
+GATE_WEBHOOK_LOOP_END = r"""const sd = $getWorkflowStaticData('global');
+if (sd.webhookTestMode !== true) {
+  return [];
+}
+return $input.all();
+"""
+
+GATE_SCHEDULED_LOOP_END = r"""const sd = $getWorkflowStaticData('global');
+if (sd.webhookTestMode === true) {
+  return [];
+}
+return $input.all();
+"""
+
 TAG_LOOP_END = r"""const sd = $getWorkflowStaticData('global');
 const j = $input.first()?.json || {};
 const webhookTest = sd.webhookTestMode === true || j.webhookTestMode === true;
@@ -1501,14 +1536,9 @@ N["passthroughNoFallback"] = add_node(node("passthroughNoFallback", "n8n-nodes-b
 }, typeVersion=2))
 N["mergeScheduleWithArticles"] = add_node(node("mergeScheduleWithArticles", "n8n-nodes-base.code", [X(10), Y1], {"jsCode": MERGE_SCHEDULE_ARTICLES}, typeVersion=2))
 N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10), Y1 + 80], {"jsCode": LOG_MERGE_STATS}, typeVersion=2))
-N["routeWebhookBatch"] = add_node(node(
-    "routeWebhookBatch", "n8n-nodes-base.if", [X(10), Y1 + 140],
-    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
-     "conditions": [{"id": "wb1", "leftValue": "={{ $json.webhookRoute }}", "rightValue": "webhook", "operator": {"type": "string", "operation": "equals"}}],
-     "combinator": "and"}},
-    typeVersion=2.2,
-))
-N["pickFirstArticle"] = add_node(node("pickFirstArticle", "n8n-nodes-base.code", [X(11), Y1 + 140], {"jsCode": PICK_FIRST_ARTICLE}, typeVersion=2))
+N["gateWebhookPath"] = add_node(node("gateWebhookPath", "n8n-nodes-base.code", [X(10), Y1 + 120], {"jsCode": GATE_WEBHOOK_PATH}, typeVersion=2))
+N["gateScheduledPath"] = add_node(node("gateScheduledPath", "n8n-nodes-base.code", [X(10), Y1 + 160], {"jsCode": GATE_SCHEDULED_PATH}, typeVersion=2))
+N["pickFirstArticle"] = add_node(node("pickFirstArticle", "n8n-nodes-base.code", [X(11), Y1 + 120], {"jsCode": PICK_FIRST_ARTICLE}, typeVersion=2))
 
 # === LOOP ===
 N["splitInBatches"] = add_node(node(
@@ -1901,13 +1931,8 @@ N["emailFlaggedPost"] = add_node(smtp_email(
 N["updatePostedURLs"] = add_node(node("updatePostedURLs", "n8n-nodes-base.code", [X(6), Y4], {"jsCode": UPDATE_POSTED_URLS}, typeVersion=2))
 N["loopBack"] = add_node(node("loopBack", "n8n-nodes-base.noOp", [X(7), Y4], {}, typeVersion=1))
 N["tagLoopEnd"] = add_node(node("tagLoopEnd", "n8n-nodes-base.code", [X(7), Y4 + 80], {"jsCode": TAG_LOOP_END}, typeVersion=2))
-N["routeLoopEnd"] = add_node(node(
-    "routeLoopEnd", "n8n-nodes-base.if", [X(8), Y4],
-    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
-     "conditions": [{"id": "le1", "leftValue": "={{ $json.webhookRoute }}", "rightValue": "webhook", "operator": {"type": "string", "operation": "equals"}}],
-     "combinator": "and"}},
-    typeVersion=2.2,
-))
+N["gateWebhookLoopEnd"] = add_node(node("gateWebhookLoopEnd", "n8n-nodes-base.code", [X(8), Y4 + 80], {"jsCode": GATE_WEBHOOK_LOOP_END}, typeVersion=2))
+N["gateScheduledLoopEnd"] = add_node(node("gateScheduledLoopEnd", "n8n-nodes-base.code", [X(8), Y4 + 120], {"jsCode": GATE_SCHEDULED_LOOP_END}, typeVersion=2))
 
 # === DAILY SUMMARY ===
 N["scheduleTrigger11PM"] = add_node(node(
@@ -2047,12 +2072,13 @@ wire("fetchFallbackNews", "fillRemainingSlots", 0)
 wire("fillRemainingSlots", "mergeScheduleWithArticles")
 wire("passthroughNoFallback", "mergeScheduleWithArticles")
 wire("mergeScheduleWithArticles", "logMergeStats")
-wire("logMergeStats", "routeWebhookBatch")
-wire("routeWebhookBatch", "pickFirstArticle", 0)  # webhook test — bypass splitInBatches
+wire("logMergeStats", "gateWebhookPath")
+wire("logMergeStats", "gateScheduledPath")
+wire("gateWebhookPath", "pickFirstArticle")
 wire("pickFirstArticle", "prepareSlotWait")
-wire("routeWebhookBatch", "splitInBatches", 1)  # scheduled multi-slot
+wire("gateScheduledPath", "splitInBatches")
 
-wire("splitInBatches", "prepareSlotWait", 0)  # current batch output (scheduled only; webhook uses pickFirstArticle)
+wire("splitInBatches", "prepareSlotWait", 0)  # scheduled multi-slot batches only
 wire("prepareSlotWait", "checkHalted")
 wire("checkHalted", "preparePostSkippedEmail", 0)  # halted true
 wire("preparePostSkippedEmail", "emailPostSkipped")
@@ -2121,9 +2147,10 @@ wire("emailFlaggedPost", "updatePostedURLs")
 wire("checkFlaggedAudit", "updatePostedURLs", 1)
 wire("updatePostedURLs", "loopBack")
 wire("loopBack", "tagLoopEnd")
-wire("tagLoopEnd", "routeLoopEnd")
-wire("routeLoopEnd", "assertWebhookPost", 0)  # webhook single slot finished
-wire("routeLoopEnd", "splitInBatches", 1)  # next scheduled slot
+wire("tagLoopEnd", "gateWebhookLoopEnd")
+wire("tagLoopEnd", "gateScheduledLoopEnd")
+wire("gateWebhookLoopEnd", "assertWebhookPost")
+wire("gateScheduledLoopEnd", "splitInBatches")
 
 # Daily summary branch
 wire("scheduleTrigger11PM", "dailySummary")
