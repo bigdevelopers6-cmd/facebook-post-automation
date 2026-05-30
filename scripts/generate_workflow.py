@@ -96,6 +96,33 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
         kw["notes"] = notes
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
+# Bumped each release — grep this on server to confirm deploy
+WORKFLOW_BUILD = "2026-05-30-trace-v3"
+
+PIPELINE_LOG_FN = r"""
+function pipelineLog(msg) {
+  const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';
+  const line = `${new Date().toISOString()} [${nodeName}] ${msg}`;
+  console.log('[PIPELINE] ' + line);
+  try {
+    const fs = require('fs');
+    fs.mkdirSync('/data/reports', { recursive: true });
+    fs.appendFileSync('/data/reports/pipeline.log', line + '\n');
+  } catch (e) { /* volume not mounted */ }
+  const sd = $getWorkflowStaticData('global');
+  sd.pipelineLog = sd.pipelineLog || [];
+  sd.pipelineLog.push(line);
+  if (sd.pipelineLog.length > 300) sd.pipelineLog = sd.pipelineLog.slice(-300);
+}
+"""
+
+
+def with_pipeline_log(code: str) -> str:
+    if "function pipelineLog(" in code:
+        return code
+    return PIPELINE_LOG_FN + "\n" + code
+
+
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
 const { DateTime } = require('luxon');
@@ -201,7 +228,7 @@ staticData.todaySchedule = schedule;
 return [{ json: { stored: true, slotCount: schedule.length } }];
 """
 
-FILTER_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
+FILTER_ARTICLES = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
@@ -276,6 +303,11 @@ const output = mixed.map(a => ({
   isRepost: false,
 }));
 
+pipelineLog(`FILTER primary=${primary.length} output=${output.length} needed=${10 - output.length} testMode=${testMode}`);
+if (output.length === 0) {
+  throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);
+}
+
 return [{
   json: {
     articles: output,
@@ -283,9 +315,9 @@ return [{
     category: 'politics+celebrities',
   }
 }];
-"""
+""")
 
-FILL_REMAINING_SLOTS = r"""const staticData = $getWorkflowStaticData('global');
+FILL_REMAINING_SLOTS = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
 const postedURLs = staticData.postedURLs || [];
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
@@ -348,19 +380,21 @@ if (articles.length < 10) {
 }
 
 if (articles.length === 0) {
-  throw new Error('No articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or run flush-cache.');
+  throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or flush-cache.');
 }
+pipelineLog(`FILL finalCount=${articles.length}`);
 
 return articles.slice(0, 10).map((a, idx) => ({
   json: { ...a, articleIndex: idx + 1 }
 }));
-"""
+""")
 
-MERGE_SCHEDULE_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
+MERGE_SCHEDULE_ARTICLES = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
 let items = $input.all().map(i => i.json);
+pipelineLog(`MERGE_SCHEDULE inputItems=${items.length}`);
 if (items.length === 0) {
-  throw new Error('No articles to post — NewsAPI returned nothing usable or all URLs were already posted. Run flush-cache or check NEWSAPI_KEY quota.');
+  throw new Error('MERGE_SCHEDULE: No articles to post — NewsAPI empty or all URLs in posted cache. Run flush-cache.');
 }
 if (staticData.singleSlotTest) {
   items = items.slice(0, 1);
@@ -379,25 +413,29 @@ return items.map((article, idx) => {
     }
   };
 });
-"""
+""")
 
-PREPARE_SLOT_WAIT = r"""const staticData = $getWorkflowStaticData('global');
+PREPARE_SLOT_WAIT = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
 if (staticData.forcePostTest) {
   staticData.forcePostTest = false;
+  pipelineLog('SLOT forcePostTest — post immediately');
   return [{ json: { ...item, waitMs: 0, halted: false } }];
 }
 if (staticData.productionHalted) {
+  pipelineLog('SLOT SKIP productionHalted=true');
   return [{ json: { ...item, halted: true, skipReason: 'PRODUCTION_API_HALT' } }];
 }
 if (staticData.circuitBreakerHalted) {
+  pipelineLog('SLOT SKIP circuitBreakerHalted=true');
   return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
 }
 const waitMs = Math.max(0, item.epochMs - Date.now());
+pipelineLog(`SLOT waitMs=${waitMs} title=${(item.title || '').slice(0, 60)}`);
 return [{ json: { ...item, waitMs, halted: false } }];
-"""
+""")
 
-EVALUATE_PRODUCTION_GATE = r"""const staticData = $getWorkflowStaticData('global');
+EVALUATE_PRODUCTION_GATE = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const gates = [
   { node: 'productionGateNewsAPI', label: 'NewsAPI', ok: (j) => j && j.status === 'ok' && Array.isArray(j.articles) && !j.error },
   { node: 'productionGateMeta', label: 'Meta', ok: (j) => j && j.id && !j.error },
@@ -428,6 +466,7 @@ if (!allApisHealthy) {
   staticData.productionHalted = false;
   staticData.circuitBreakerHalted = false;
 }
+pipelineLog(`GATE healthy=${allApisHealthy} failures=${failures.length} ${failures.map(f => f.api).join(',') || 'none'}`);
 return [{
   json: {
     allApisHealthy,
@@ -436,9 +475,9 @@ return [{
     haltReason: allApisHealthy ? null : 'PRODUCTION_COST_GUARD',
   }
 }];
-"""
+""")
 
-HALT_PRODUCTION = r"""const staticData = $getWorkflowStaticData('global');
+HALT_PRODUCTION = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
 staticData.productionHalted = true;
 staticData.circuitBreakerHalted = true;
@@ -460,7 +499,8 @@ return [{
     failures: item.failures || staticData.lastApiGateFailures,
   }
 }];
-"""
+pipelineLog('HALT production stopped: ' + (staticData.productionHaltReason || 'unknown'));
+""")
 
 MARK_CAPTION_REVIEW_PASSED = r"""const item = $input.first().json;
 if (!item.review || item.review.approved !== true || item.review.risk_level === 'high') {
@@ -830,13 +870,14 @@ return [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageS
 """
 
 
-HANDLE_PUBLISH_SUCCESS = r"""const response = $input.first().json;
+HANDLE_PUBLISH_SUCCESS = with_pipeline_log(r"""const response = $input.first().json;
 const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;
 const postId = response.id || response.post_id || '';
+pipelineLog('PUBLISH_OK postId=' + postId + ' title=' + (item.title || '').slice(0, 50));
 return [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];
-"""
+""")
 
-HANDLE_PUBLISH_ERROR = r"""const staticData = $getWorkflowStaticData('global');
+HANDLE_PUBLISH_ERROR = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 staticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;
 staticData.errorLog = staticData.errorLog || [];
 let ctx = {};
@@ -853,8 +894,9 @@ if (staticData.consecutiveFailures > 4) {
   staticData.circuitBreakerHalted = true;
 }
 if (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.slice(-500);
+pipelineLog('PUBLISH_FAIL ' + (err.error?.message || JSON.stringify(err)).slice(0, 200));
 return [{ json: { ...ctx, ...err, publishSuccess: false, consecutiveFailures: staticData.consecutiveFailures } }];
-"""
+""")
 
 PARSE_POST_AUDIT = r"""const raw = $input.first().json.content?.[0]?.text || '{}';
 let audit;
@@ -926,9 +968,18 @@ staticData.errorLog.push({
 return [{ json: { skipped: true, reason: 'TOKEN_INVALID' } }];
 """
 
-SKIP_HALTED = r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
+SKIP_HALTED = with_pipeline_log(r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
+pipelineLog('SKIP_HALTED reason=' + reason);
 return [{ json: { skipped: true, reason } }];
+""")
+
+PIPELINE_SUMMARY = with_pipeline_log(
+    rf"""const sd = $getWorkflowStaticData('global');
+const lines = sd.pipelineLog || [];
+pipelineLog('SUMMARY complete build={WORKFLOW_BUILD}');
+return [{{ json: {{ build: '{WORKFLOW_BUILD}', trace: lines.slice(-30) }} }}];
 """
+)
 
 DAILY_SUMMARY = r"""const { DateTime } = require('luxon');
 const staticData = $getWorkflowStaticData('global');
@@ -985,21 +1036,30 @@ staticData.lastApiGateFailures = [];
 return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 """
 
-AUTO_TEST_ONE = r"""const staticData = $getWorkflowStaticData('global');
-staticData.todaySchedule = [{
+AUTO_TEST_ONE = with_pipeline_log(
+    rf"""const staticData = $getWorkflowStaticData('global');
+staticData.pipelineLog = [];
+try {{
+  const fs = require('fs');
+  fs.mkdirSync('/data/reports', {{ recursive: true }});
+  fs.writeFileSync('/data/reports/pipeline.log', '');
+}} catch (e) {{}}
+pipelineLog('BUILD={WORKFLOW_BUILD} webhook test-one started');
+staticData.todaySchedule = [{{
   slotIndex: 1,
   epochMs: Date.now() + 1000,
   windowLabel: 'test_one',
   scheduledEt: 'now',
-}];
+}}];
 staticData.singleSlotTest = true;
 staticData.forcePostTest = true;
 staticData.circuitBreakerHalted = false;
 staticData.productionHalted = false;
 staticData.apisHealthy = null;
 staticData.lastApiGateFailures = [];
-return [{ json: { command: 'test-one', mode: 'single_slot' } }];
+return [{{ json: {{ command: 'test-one', mode: 'single_slot', build: '{WORKFLOW_BUILD}' }} }}];
 """
+)
 
 AUTO_REVIEW_LOG = r"""const staticData = $getWorkflowStaticData('global');
 const log = staticData.auditLog || [];
@@ -1031,7 +1091,7 @@ AUTO_HEALTH_CHECK = r"""return [{ json: { command: 'health-check', pingApis: tru
 CATEGORY_PREP = r"""return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];
 """
 
-MERGE_NEWS_FEEDS = r"""function safeArticles(nodeName) {
+MERGE_NEWS_FEEDS = with_pipeline_log(r"""function safeArticles(nodeName) {
   try {
     if (!$(nodeName).isExecuted) return [];
     const j = $(nodeName).first().json;
@@ -1047,9 +1107,12 @@ const articles = [
   ...politics.map(a => ({ ...a, _topic: 'politics' })),
   ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),
 ];
-console.log('MERGE_NEWS_FEEDS politics=' + politics.length + ' celebrities=' + celebrities.length);
+pipelineLog(`NEWS politics=${politics.length} celebrities=${celebrities.length} total=${articles.length}`);
+if (articles.length === 0) {
+  throw new Error('MERGE_NEWS_FEEDS: NewsAPI returned 0 articles — check NEWSAPI_KEY, User-Agent, or quota.');
+}
 return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
-"""
+""")
 
 LOG_FILTER_STATS = r"""const j = $input.first().json;
 console.log('FILTER_ARTICLES count=' + (j.articles || []).length + ' needed=' + j.needed);
@@ -1369,6 +1432,7 @@ N["checkHalted"] = add_node(node(
     typeVersion=2.2,
 ))
 N["skipHalted"] = add_node(node("skipHalted", "n8n-nodes-base.code", [X(2), Y1 + 120], {"jsCode": SKIP_HALTED}, typeVersion=2))
+N["pipelineSummary"] = add_node(node("pipelineSummary", "n8n-nodes-base.code", [X(2), Y1 + 200], {"jsCode": PIPELINE_SUMMARY}, typeVersion=2))
 N["waitForSlot"] = add_node(node(
     "waitForSlot", "n8n-nodes-base.wait", [X(3), Y1],
     {"resume": "timeInterval", "amount": "={{ $json.waitMs }}", "unit": "milliseconds"},
@@ -1886,7 +1950,8 @@ wire("checkHalted", "preparePostSkippedEmail", 0)  # halted true
 wire("preparePostSkippedEmail", "emailPostSkipped")
 wire("emailPostSkipped", "skipHalted")
 wire("checkHalted", "waitForSlot", 1)  # not halted
-wire("skipHalted", "loopBack")
+wire("skipHalted", "pipelineSummary")
+wire("pipelineSummary", "loopBack")
 wire("waitForSlot", "checkFBToken")
 wire("checkFBToken", "parseFBToken", 0)
 wire("checkFBToken", "parseFBToken", 1)
@@ -2005,6 +2070,7 @@ workflow = {
     "meta": {
         "templateCredsSetupCompleted": False,
         "instanceId": "facebook-us-news-automation",
+        "workflowBuild": WORKFLOW_BUILD,
     },
     "versionId": nid(),
 }

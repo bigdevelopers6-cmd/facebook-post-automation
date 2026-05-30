@@ -1,5 +1,5 @@
 #!/bin/bash
-# Trigger one test post and show live pipeline progress in the console.
+# Trigger one test post and show live pipeline progress + file trace.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -9,6 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v3}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -22,7 +23,7 @@ fetch_latest_execution_id() {
     "http://localhost:5678/rest/executions?limit=8&workflowId=$WF_ID" | \
     python3 -c "
 import sys, json
-from datetime import datetime, timezone
+from datetime import datetime
 since = int(sys.argv[1]) if len(sys.argv) > 1 else 0
 data = json.load(sys.stdin).get('data', {}).get('results', [])
 picked = None
@@ -51,28 +52,27 @@ fetch_execution_json() {
     "http://localhost:5678/rest/executions/${id}?includeData=true" -o /tmp/exec.json
 }
 
-show_progress() {
-  local elapsed="$1"
-  if [ -f scripts/pipeline-progress.py ]; then
-    python3 scripts/pipeline-progress.py /tmp/exec.json "$elapsed"
-  else
-    python3 << PY
-import json
-with open("/tmp/exec.json") as f: root=json.load(f)
-data=root.get("data",{}); inner=data.get("data")
-if isinstance(inner,str): inner=json.loads(inner)
-rd=(inner.get("resultData") if isinstance(inner,dict) else None) or {}
-run=rd.get("runData",{}) if isinstance(rd,dict) else {}
-print("Last node:", rd.get("lastNodeExecuted"), "| nodes:", len(run), "| status:", data.get("status"))
-PY
+preflight() {
+  local markers
+  markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  echo "Workflow file: pipelineLog markers=$markers (need >= 3)"
+  if [ "${markers:-0}" -lt 3 ]; then
+    echo "[!!] FAILED  OLD workflow JSON on server."
+    echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
+    exit 1
   fi
+  mkdir -p data/reports
+  : > data/reports/pipeline.log
+  echo "[OK]  Cleared data/reports/pipeline.log for this run"
 }
 
 echo "=============================================="
 echo " Facebook US News Bot — Manual test post"
+echo " Build expect: $WORKFLOW_BUILD_EXPECT"
 echo "=============================================="
 echo ""
 
+preflight
 n8n_login
 
 TRIGGER_EPOCH=$(date +%s)
@@ -106,12 +106,18 @@ while true; do
     fetch_execution_json "$EXEC_ID"
     clear 2>/dev/null || true
     echo "Execution ID: $EXEC_ID"
-    show_progress "$ELAPSED"
+    if [ -f scripts/pipeline-progress.py ]; then
+      python3 scripts/pipeline-progress.py /tmp/exec.json "$ELAPSED" 2>/dev/null || true
+    fi
     echo ""
     echo "Facebook page: https://www.facebook.com/$FB_PAGE"
-    echo "(Ctrl+C to stop watching — workflow may still run in n8n)"
+    if [ -s data/reports/pipeline.log ]; then
+      echo "--- pipeline.log (live) ---"
+      tail -8 data/reports/pipeline.log
+      echo "---------------------------"
+    fi
   else
-    echo "[..] PENDING      Waiting for execution to appear... (${ELAPSED}s)"
+    echo "[..] PENDING      Waiting for execution... (${ELAPSED}s)"
   fi
 
   STATUS=$(python3 -c "
@@ -126,20 +132,18 @@ except Exception:
   if [ "$STATUS" = "success" ] || [ "$STATUS" = "error" ] || [ "$STATUS" = "crashed" ]; then
     echo ""
     if [ "$STATUS" = "success" ] && [ "$ELAPSED" -lt 8 ]; then
-      echo "[!!] WARNING      Finished in ${ELAPSED}s — likely no post (empty articles or skipped). Check diagnose output below."
+      echo "[!!] WARNING      Finished in ${ELAPSED}s — usually means NO POST."
     fi
     if [ "$STATUS" = "success" ]; then
-      echo "[OK]  DONE         Workflow finished (success)."
+      echo "[OK]  DONE         Workflow status: success"
     else
-      echo "[!!] FAILED       Workflow finished with status: $STATUS"
-      echo "Run: ./scripts/diagnose-execution.sh $EXEC_ID"
+      echo "[!!] FAILED       Workflow status: $STATUS"
     fi
     break
   fi
 
   if [ "$ELAPSED" -ge "$POLL_SECS" ]; then
-    echo ""
-    echo "[..] TIMEOUT      Still running after ${POLL_SECS}s — check n8n UI Executions."
+    echo "[..] TIMEOUT      Still running — check n8n UI"
     break
   fi
 
@@ -147,20 +151,22 @@ except Exception:
 done
 
 echo ""
-echo "=== Nodes in execution $EXEC_ID ==="
-if [ -n "$EXEC_ID" ] && [ -f /tmp/exec.json ]; then
-  python3 << PY
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path("scripts").resolve()))
-from n8n_exec_parse import parse_execution, format_node_list
-import json
-root = json.load(open("/tmp/exec.json"))
-run, last, status, _ = parse_execution(root)
-print("Status:", status, "| Last:", last, "| Count:", len(run))
-print(format_node_list(run))
-PY
+bash scripts/execution-report.sh "$EXEC_ID" 2>/dev/null || {
+  echo "(execution-report.sh missing — run git pull)"
+}
+
+if [ -s data/reports/pipeline.log ]; then
+  if grep -q 'PUBLISH_OK' data/reports/pipeline.log; then
+    echo ""
+    echo "[OK]  POST LIKELY SUCCEEDED (see PUBLISH_OK in pipeline.log)"
+  elif grep -qE 'FILTER_ARTICLES: 0|MERGE_NEWS_FEEDS: 0|MERGE_SCHEDULE: 0|SKIP_HALTED|HALT production' data/reports/pipeline.log; then
+    echo ""
+    echo "[!!] ROOT CAUSE in pipeline.log (see lines above)"
+  elif [ "$ELAPSED" -lt 8 ] 2>/dev/null; then
+    echo ""
+    echo "[!!] No pipeline.log lines — workflow build not deployed or wrong execution ID"
+  fi
+else
+  echo ""
+  echo "[!!] pipeline.log is EMPTY — redeploy: bash scripts/server-deploy.sh"
 fi
-echo ""
-echo "=== Docker pipeline hints (last 3 min) ==="
-docker logs facebook-news-n8n --since 3m 2>&1 | grep -iE 'FILTER_ARTICLES|MERGE_NEWS|MERGE_SCHEDULE|No articles|executing node' | tail -12 || echo "(none — run on server with docker)"

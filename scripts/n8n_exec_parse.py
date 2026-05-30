@@ -74,6 +74,25 @@ def parse_execution(root: dict) -> Tuple[dict, Optional[str], Optional[str], dic
     return (run if isinstance(run, dict) else {}), last, status, data
 
 
+def scan_raw_execution(raw_text: str) -> dict:
+    """Mine execution JSON text when runData is missing (n8n 2.x)."""
+    import re
+
+    out: dict = {
+        "last_nodes": re.findall(r'"lastNodeExecuted"\s*:\s*"([^"]+)"', raw_text),
+        "errors": re.findall(r'"message"\s*:\s*"((?:[^"\\]|\\.){10,300})"', raw_text),
+        "pipeline_lines": re.findall(r'\[PIPELINE\][^\n"]{10,200}', raw_text),
+    }
+    for name in (
+        "webhookSetup", "evaluateProductionApis", "filterArticles", "mergeNewsFeeds",
+        "mergeScheduleWithArticles", "prepareSlotWait", "publishToFacebook", "skipHalted",
+    ):
+        c = raw_text.count(f'"{name}"')
+        if c:
+            out.setdefault("node_hits", {})[name] = c
+    return out
+
+
 def format_node_list(run: dict) -> str:
     if not run:
         return "(no runData — workflow may have saved without node details)"
