@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v9-webhook-fastpublish}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v10-feed-publish}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -55,9 +55,9 @@ fetch_execution_json() {
 preflight() {
   local markers
   markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  v8=$(grep -c 'trace-v8-webhook-direct' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  echo "Workflow: trace-v8=$v8 pipelineLog-fn=$markers (want v8>=1, fn=0)"
-  if [ "${v8:-0}" -lt 1 ]; then
+  v10=$(grep -c 'trace-v10-feed-publish' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  echo "Workflow: trace-v10=$v10 pipelineLog-fn=$markers (want v10>=1, fn=0)"
+  if [ "${v10:-0}" -lt 1 ]; then
     echo "[!!] FAILED  OLD workflow JSON on server."
     echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
     exit 1

@@ -64,6 +64,8 @@ RAW_TRACE_MARKERS = [
     ("prepareSlotWait: forcePostTest", "slot", "done"),
     ("parseFBToken:", "token", "done"),
     ("webhookPreparePublish:", "caption", "done"),
+    ("gatePublishFeed:", "publish", "done"),
+    ("prepareFacebookPublish: mode=feed", "publish", "done"),
     ("parseFBToken: valid=false", "token", "failed"),
     ("SKIP_TOKEN_INVALID", "token", "skipped"),
     ("SKIP_HALTED:", "slot", "skipped"),

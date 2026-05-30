@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v9-webhook-fastpublish"
+WORKFLOW_BUILD = "2026-05-30-trace-v10-feed-publish"
 
 # Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
 TRACE_FN = r"""
@@ -910,7 +910,7 @@ try {
 }
 const item = { ...base };
 const img = item.finalImageUrl || item.urlToImage || '';
-__trace('applyImageFallback: image='+!!img+' url='+String(item.url||'').slice(0,60));
+__trace('applyImageFallback: imageUrl='+String(img||'').slice(0,90)+' article='+String(item.url||'').slice(0,50));
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -937,17 +937,33 @@ return [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimesta
 """
 
 HANDLE_PUBLISH_ERROR = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
-__trace('PUBLISH_FAIL: '+JSON.stringify($input.first().json).slice(0,200));
+const raw = $input.first().json;
+let ctx = {};
+try { ctx = $('prepareFacebookPublish').first().json; } catch (e) {
+  try { ctx = $('mergeImagePaths').first().json; } catch (e2) {}
+}
+let fbMsg = '';
+if (raw.error) {
+  fbMsg = typeof raw.error === 'object' ? JSON.stringify(raw.error).slice(0, 400) : String(raw.error);
+} else if (raw.body?.error) {
+  fbMsg = JSON.stringify(raw.body.error).slice(0, 400);
+} else if (raw.message && !raw.title) {
+  fbMsg = String(raw.message);
+} else if (raw.title && raw.url) {
+  fbMsg = 'Graph API rejected publish (n8n error output had article payload). Try feed link mode or fix image URL.';
+} else {
+  fbMsg = JSON.stringify(raw).slice(0, 400);
+}
+__trace('PUBLISH_FAIL: '+fbMsg);
+__trace('PUBLISH_FAIL mode='+String(ctx.useFeedLink)+' image='+String(ctx.finalImageUrl||'').slice(0,90)+' link='+String(ctx.publishLink||ctx.url||'').slice(0,60));
 staticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;
 staticData.errorLog = staticData.errorLog || [];
-let ctx = {};
-try { ctx = $('mergeImagePaths').first().json; } catch (e) {}
-const err = $input.first().json;
+const err = raw;
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
   node_name: 'publishToFacebook',
-  error_code: err.error?.statusCode || 'FB_ERROR',
-  error_message: err.error?.message || JSON.stringify(err),
+  error_code: err.error?.code || err.error?.statusCode || 'FB_ERROR',
+  error_message: fbMsg,
   article_url: ctx.url || 'unknown',
 });
 if (staticData.consecutiveFailures > 4) {
@@ -1083,8 +1099,21 @@ const title = item.title || 'US News Update';
 const caption = (item.caption && String(item.caption).length > 15)
   ? item.caption
   : title + '\\n\\nWhat do you think? Share below. #USNews #Politics #CelebrityNews';
-const img = item.finalImageUrl || item.urlToImage || '';
-__trace('webhookPreparePublish: tokenValid='+item.tokenValid+' image='+!!img);
+const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
+let img = item.finalImageUrl || item.urlToImage || '';
+function isDirectImageUrl(u) {
+  if (!u || typeof u !== 'string') return false;
+  try {
+    const url = new URL(u);
+    const p = url.pathname.toLowerCase();
+    if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(p)) return true;
+    const h = url.hostname;
+    if (/unsplash|cloudfront|akamai|imgur|fbcdn|googleusercontent|images\.|i\.imgur/i.test(h)) return true;
+  } catch (e) { return false; }
+  return false;
+}
+if (!isDirectImageUrl(img)) img = PLACEHOLDER_IMAGE;
+__trace('webhookPreparePublish: tokenValid='+item.tokenValid+' useFeedLink=true img='+String(img).slice(0,70));
 return [{ json: {
   ...item,
   halted: false,
@@ -1096,10 +1125,50 @@ return [{ json: {
   prePublishReviewPassed: true,
   useFallbackImage: true,
   finalImageUrl: img,
-  aiImageCleared: !!img,
+  aiImageCleared: true,
+  useFeedLink: true,
+  publishLink: item.url || item.publishLink,
   webhookTestMode: true,
   webhookRoute: 'webhook',
 }}];
+"""
+
+PREPARE_FACEBOOK_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + r"""const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
+function isDirectImageUrl(u) {
+  if (!u || typeof u !== 'string') return false;
+  try {
+    const url = new URL(u);
+    const p = url.pathname.toLowerCase();
+    if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(p)) return true;
+    const h = url.hostname;
+    if (/unsplash|cloudfront|akamai|imgur|fbcdn|googleusercontent|images\./i.test(h)) return true;
+  } catch (e) { return false; }
+  return false;
+}
+const sd = $getWorkflowStaticData('global');
+const item = $input.first().json;
+const webhook = __isWebhookRun(sd) || item.webhookTestMode === true;
+let finalImageUrl = item.finalImageUrl || item.urlToImage || '';
+if (!isDirectImageUrl(finalImageUrl)) {
+  __trace('prepareFacebookPublish: non-direct image, placeholder was='+String(finalImageUrl).slice(0,70));
+  finalImageUrl = PLACEHOLDER_IMAGE;
+}
+const useFeedLink = webhook || item.useFeedLink === true;
+const publishLink = item.publishLink || item.url || '';
+__trace('prepareFacebookPublish: mode='+(useFeedLink?'feed_link':'photo')+' img='+String(finalImageUrl).slice(0,70));
+return [{ json: { ...item, finalImageUrl, useFeedLink, publishLink, aiImageCleared: true } }];
+"""
+
+GATE_PUBLISH_PHOTO = TRACE_FN + r"""const item = $input.first().json;
+if (item.useFeedLink === true) return [];
+__trace('gatePublishPhoto: photo post');
+return [{ json: item }];
+"""
+
+GATE_PUBLISH_FEED = TRACE_FN + r"""const item = $input.first().json;
+if (item.useFeedLink !== true) return [];
+__trace('gatePublishFeed: link post link='+String(item.publishLink||'').slice(0,70));
+return [{ json: item }];
 """
 
 PIPELINE_SUMMARY = rf"""const sd = $getWorkflowStaticData('global');
@@ -1234,6 +1303,7 @@ if (wasWebhook && !published) {
   else if (log.some(l => String(l).includes('BLOCKED_PUBLISH'))) hint = 'BLOCKED_PUBLISH';
   else if (log.some(l => String(l).includes('SKIP_HALTED'))) hint = 'SLOT_HALTED';
   else if (log.some(l => String(l).includes('PUBLISH_FAIL'))) hint = 'FACEBOOK_PUBLISH_ERROR';
+  else if (log.some(l => String(l).includes('gatePublishFeed'))) hint = 'FEED_PUBLISH_FAILED';
   let fileTail = '';
   try { fileTail = require('fs').readFileSync('/data/reports/pipeline.log', 'utf8').slice(-2500); } catch(e) {}
   throw new Error('WEBHOOK_TEST_NO_POST_'+hint+' Trace='+trace+' FileLogTail='+fileTail);
@@ -1966,9 +2036,12 @@ N["slotOpenAIPass"] = add_node(node(
 # === PUBLISHER ===
 N["logPrePublish"] = add_node(node("logPrePublish", "n8n-nodes-base.code", [X(0), Y4 - 60], {
     "jsCode": TRACE_FN + r"""const j = $input.first().json;
-__trace('publishToFacebook: start page='+($env.FB_PAGE_ID||'')+' image='+!!j.finalImageUrl+' captionLen='+String(j.caption||'').length);
+__trace('logPrePublish: page='+($env.FB_PAGE_ID||'')+' mode='+(j.useFeedLink?'feed':'photo')+' captionLen='+String(j.caption||'').length);
 return [{ json: j }];"""
 }, typeVersion=2))
+N["prepareFacebookPublish"] = add_node(node("prepareFacebookPublish", "n8n-nodes-base.code", [X(0), Y4 - 30], {"jsCode": PREPARE_FACEBOOK_PUBLISH}, typeVersion=2))
+N["gatePublishPhoto"] = add_node(node("gatePublishPhoto", "n8n-nodes-base.code", [X(0), Y4 - 10], {"jsCode": GATE_PUBLISH_PHOTO}, typeVersion=2))
+N["gatePublishFeed"] = add_node(node("gatePublishFeed", "n8n-nodes-base.code", [X(0), Y4 + 10], {"jsCode": GATE_PUBLISH_FEED}, typeVersion=2))
 N["publishToFacebook"] = add_node(node(
     "publishToFacebook", "n8n-nodes-base.httpRequest", [X(0), Y4],
     {
@@ -1979,6 +2052,21 @@ N["publishToFacebook"] = add_node(node(
         "bodyParameters": {"parameters": [
             {"name": "url", "value": "={{ $json.finalImageUrl }}"},
             {"name": "message", "value": "={{ $json.caption }}"},
+            {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
+        ]},
+    },
+    typeVersion=4.2, onError="continueErrorOutput",
+))
+N["publishFeedLink"] = add_node(node(
+    "publishFeedLink", "n8n-nodes-base.httpRequest", [X(0), Y4 + 40],
+    {
+        "method": "POST",
+        "url": "={{ 'https://graph.facebook.com/v19.0/' + ($env.FB_PAGE_ID || '') + '/feed' }}",
+        "sendBody": True,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {"parameters": [
+            {"name": "message", "value": "={{ $json.caption }}"},
+            {"name": "link", "value": "={{ $json.publishLink || $json.url }}"},
             {"name": "access_token", "value": "={{ $env.FB_ACCESS_TOKEN }}"},
         ]},
     },
@@ -2241,12 +2329,18 @@ wire("extractImageUrl", "mergeImagePaths")
 wire("mergeImagePaths", "webhookEnsurePublish")
 wire("webhookEnsurePublish", "finalPublishGate")
 wire("finalPublishGate", "logPrePublish", 0)
-wire("logPrePublish", "publishToFacebook")
+wire("logPrePublish", "prepareFacebookPublish")
+wire("prepareFacebookPublish", "gatePublishPhoto")
+wire("prepareFacebookPublish", "gatePublishFeed")
+wire("gatePublishPhoto", "publishToFacebook")
+wire("gatePublishFeed", "publishFeedLink")
 wire("finalPublishGate", "logBlockedPublish", 1)
 wire("logBlockedPublish", "preparePostSkippedEmail")
 
 wire("publishToFacebook", "handlePublishSuccess", 0)
 wire("publishToFacebook", "handlePublishError", 1)
+wire("publishFeedLink", "handlePublishSuccess", 0)
+wire("publishFeedLink", "handlePublishError", 1)
 wire("handlePublishError", "preparePublishFailEmail")
 wire("preparePublishFailEmail", "emailPublishFailed")
 wire("emailPublishFailed", "checkCircuitAfterError")
