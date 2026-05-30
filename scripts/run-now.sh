@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v8-webhook-direct}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v9-webhook-fastpublish}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -161,8 +161,10 @@ try:
     text = " ".join(errs)
     if "WEBHOOK_TEST_NO_POST_" in text or "WEBHOOK_TEST_NO_POST_" in raw:
         print("\n[!!] NO POST — read 'data.error' / Trace above")
-        if "ROUTE_FAILED" in text or "NO_SLOT_WAIT" in text or "webhookDirectToSlot" not in open("data/reports/pipeline.log", encoding="utf-8", errors="replace").read() if __import__("os").path.isfile("data/reports/pipeline.log") else "":
-            print("    Likely fix: bash scripts/server-deploy.sh (need v8 webhookDirectToSlot)")
+        if "ROUTE_FAILED" in text or "NO_WEBHOOK_SLOT_FAST" in text:
+            print("    Likely fix: bash scripts/server-deploy.sh (need v9 webhookSlotFast)")
+        elif "NO_WEBHOOK_PREPARE" in text or "NO_TOKEN_CHECK" in text:
+            print("    Likely fix: v9 deploy + valid FB_ACCESS_TOKEN in .env")
         elif "SKIP_TOKEN_INVALID" in text or "TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
             print("    Likely fix: renew FB_ACCESS_TOKEN in .env, then docker compose up -d")
         elif "BLOCKED_PUBLISH" in text:

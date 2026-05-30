@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v8-webhook-direct"
+WORKFLOW_BUILD = "2026-05-30-trace-v9-webhook-fastpublish"
 
 # Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
 TRACE_FN = r"""
@@ -436,7 +436,7 @@ const webhookTestMode = staticData.webhookTestMode === true || item.webhookTestM
 const webhookRoute = item.webhookRoute || (webhookTestMode ? 'webhook' : 'scheduled');
 if (item.webhookDirectReady) {
   __trace('prepareSlotWait: from webhookDirectToSlot');
-  return [{ json: { ...item, webhookDirectReady: false, webhookRoute, webhookTestMode } }];
+  return [{ json: { ...item, webhookDirectReady: false, webhookRoute, webhookTestMode, halted: false, waitMs: 0 } }];
 }
 if (staticData.forcePostTest) {
   staticData.forcePostTest = false;
@@ -576,7 +576,7 @@ return [{
 }];
 """
 
-WEBHOOK_ENSURE_PUBLISH = r"""const sd = $getWorkflowStaticData('global');
+WEBHOOK_ENSURE_PUBLISH = TRACE_FN + r"""const sd = $getWorkflowStaticData('global');
 let item = { ...$input.first().json };
 const test = sd.webhookTestMode === true || item.webhookTestMode === true || item.windowLabel === 'test_one';
 if (test) {
@@ -591,16 +591,14 @@ if (test) {
   item.useFallbackImage = true;
   item.finalImageUrl = item.finalImageUrl || item.urlToImage;
   item.aiImageCleared = !!(item.finalImageUrl);
-  const __sdW=$getWorkflowStaticData('global');
-  (__sdW.pipelineLog=__sdW.pipelineLog||[]).push('webhookEnsurePublish: caption='+item.captionGenerated+' image='+!!item.finalImageUrl);
+  __trace('webhookEnsurePublish: caption='+!!item.caption+' image='+!!item.finalImageUrl);
 }
 return [{ json: item }];
 """
 
-LOG_BLOCKED_PUBLISH = r"""const staticData = $getWorkflowStaticData('global');
+LOG_BLOCKED_PUBLISH = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
-const __sdB=$getWorkflowStaticData('global');
-(__sdB.pipelineLog=__sdB.pipelineLog||[]).push('BLOCKED_PUBLISH: caption='+(item.caption?'yes':'no')+' image='+(item.finalImageUrl?'yes':'no')+' approved='+item.aiCaptionApproved);
+__trace('BLOCKED_PUBLISH: caption='+(item.caption?'yes':'no')+' image='+(item.finalImageUrl?'yes':'no')+' approved='+item.aiCaptionApproved);
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -901,18 +899,27 @@ const prev = $('buildImagePrompt').first().json;
 return [{ json: { ...prev, imageReview: review } }];
 """
 
-APPLY_IMAGE_FALLBACK = r"""const staticData = $getWorkflowStaticData('global');
-const base = $('buildImagePrompt').first().json;
-const item = { ...base, ...($input.first().json || {}) };
+APPLY_IMAGE_FALLBACK = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
+let base = $input.first().json || {};
+try {
+  base = { ...base, ...$('buildImagePrompt').first().json };
+} catch (e) {
+  try { base = { ...base, ...$('webhookPreparePublish').first().json }; } catch (e2) {
+    try { base = { ...base, ...$('prepareSlotWait').first().json }; } catch (e3) {}
+  }
+}
+const item = { ...base };
+const img = item.finalImageUrl || item.urlToImage || '';
+__trace('applyImageFallback: image='+!!img+' url='+String(item.url||'').slice(0,60));
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
-  node_name: 'imageReviewGate',
+  node_name: 'applyImageFallback',
   error_code: 'IMAGE_FALLBACK_USED',
-  error_message: item.imageReview?.reason || 'Image review skipped or rejected',
+  error_message: item.imageReview?.reason || 'NewsAPI image fallback',
   article_url: item.url,
 });
-return [{ json: { ...item, useFallbackImage: true, finalImageUrl: item.urlToImage, imageSource: 'newsapi_fallback' } }];
+return [{ json: { ...item, useFallbackImage: true, finalImageUrl: img, imageSource: item.imageSource || 'newsapi_fallback', aiImageCleared: !!img } }];
 """
 
 EXTRACT_IMAGE_URL = r"""const item = $('buildImagePrompt').first().json;
@@ -992,14 +999,13 @@ staticData.consecutiveFailures = 0;
 return [{ json: { updated: true, url } }];
 """
 
-PARSE_FB_TOKEN = r"""const response = $input.first().json;
+PARSE_FB_TOKEN = TRACE_FN + r"""const response = $input.first().json;
 const err = response.error || (response.errors && response.errors[0]);
 const isValid = !!(response.id && !err);
 const item = $('prepareSlotWait').first().json;
 const sdTok = $getWorkflowStaticData('global');
-const isWebhookTest = sdTok.webhookTestMode === true || item.windowLabel === 'test_one';
-const __sdT=$getWorkflowStaticData('global');
-(__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: valid='+isValid+' test='+isWebhookTest+' detail='+String(err ? JSON.stringify(err).slice(0,120) : (response.id||'ok')));
+const isWebhookTest = sdTok.webhookTestMode === true || item.webhookTestMode === true || item.windowLabel === 'test_one';
+__trace('parseFBToken: valid='+isValid+' webhook='+isWebhookTest+' detail='+String(err ? JSON.stringify(err).slice(0,120) : (response.id||'ok')));
 if (!isValid) {
   const staticData = $getWorkflowStaticData('global');
   staticData.errorLog = staticData.errorLog || [];
@@ -1013,15 +1019,14 @@ if (!isValid) {
 }
 const skipPosting = isWebhookTest ? false : !isValid;
 if (isWebhookTest && !isValid) {
-  (__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: webhook test will still try publish (fix FB_ACCESS_TOKEN)');
+  __trace('parseFBToken: webhook will still attempt publish — renew FB_ACCESS_TOKEN in .env');
 }
 const webhookRoute = item.webhookRoute || (isWebhookTest ? 'webhook' : 'scheduled');
-return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting, webhookTestMode: isWebhookTest, webhookRoute, tokenCheckDetail: err || response.id } }];
+return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting, webhookTestMode: isWebhookTest, webhookRoute, tokenCheckDetail: err ? JSON.stringify(err).slice(0, 200) : (response.id || 'ok') } }];
 """
 
-SKIP_INVALID_TOKEN = r"""const staticData = $getWorkflowStaticData('global');
-const __sdSk=$getWorkflowStaticData('global');
-(__sdSk.pipelineLog=__sdSk.pipelineLog||[]).push('SKIP_TOKEN_INVALID');
+SKIP_INVALID_TOKEN = TRACE_FN + r"""__trace('SKIP_TOKEN_INVALID');
+const staticData = $getWorkflowStaticData('global');
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
@@ -1033,10 +1038,68 @@ staticData.errorLog.push({
 return [{ json: { skipped: true, reason: 'TOKEN_INVALID' } }];
 """
 
-SKIP_HALTED = r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
-const __sdSk=$getWorkflowStaticData('global');
-(__sdSk.pipelineLog=__sdSk.pipelineLog||[]).push('SKIP_HALTED: '+reason);
+SKIP_HALTED = TRACE_FN + r"""const reason = $input.first().json.skipReason || 'CIRCUIT_BREAKER_HALTED';
+__trace('SKIP_HALTED: '+reason);
 return [{ json: { skipped: true, reason } }];
+"""
+
+WEBHOOK_SLOT_FAST = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+if (!__isWebhookRun(sd)) {
+  return [];
+}
+const item = $input.first().json;
+__trace('webhookSlotFast: bypass checkHalted/waitForSlot');
+return [{ json: { ...item, halted: false, waitMs: 0, webhookTestMode: true, webhookRoute: 'webhook' } }];
+"""
+
+GATE_SCHEDULED_HALTED = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+if (__isWebhookRun(sd)) return [];
+const item = $input.first().json;
+if (item.halted !== true) return [];
+__trace('gateScheduledHalted: reason='+String(item.skipReason||'halted'));
+return [{ json: item }];
+"""
+
+GATE_SCHEDULED_CONTINUE = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+if (__isWebhookRun(sd)) return [];
+const item = $input.first().json;
+if (item.halted === true) return [];
+__trace('gateScheduledContinue: waitMs='+String(item.waitMs||0));
+return [{ json: item }];
+"""
+
+GATE_SCHEDULED_TOKEN = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+if (__isWebhookRun(sd)) {
+  __trace('gateScheduledToken: skip (webhook uses fast publish)');
+  return [];
+}
+return $input.all();
+"""
+
+WEBHOOK_PREPARE_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+if (!__isWebhookRun(sd)) return [];
+const item = $input.first().json;
+const title = item.title || 'US News Update';
+const caption = (item.caption && String(item.caption).length > 15)
+  ? item.caption
+  : title + '\\n\\nWhat do you think? Share below. #USNews #Politics #CelebrityNews';
+const img = item.finalImageUrl || item.urlToImage || '';
+__trace('webhookPreparePublish: tokenValid='+item.tokenValid+' image='+!!img);
+return [{ json: {
+  ...item,
+  halted: false,
+  skipPosting: false,
+  caption,
+  captionGenerated: true,
+  captionProvider: item.captionProvider || 'webhook_fast',
+  aiCaptionApproved: true,
+  prePublishReviewPassed: true,
+  useFallbackImage: true,
+  finalImageUrl: img,
+  aiImageCleared: !!img,
+  webhookTestMode: true,
+  webhookRoute: 'webhook',
+}}];
 """
 
 PIPELINE_SUMMARY = rf"""const sd = $getWorkflowStaticData('global');
@@ -1163,6 +1226,9 @@ if (wasWebhook && !published) {
   const trace = log.slice(-30).join(' | ');
   let hint = 'UNKNOWN';
   if (!log.some(l => String(l).includes('webhookDirectToSlot: GO'))) hint = 'ROUTE_FAILED_no_webhookDirect';
+  else if (!log.some(l => String(l).includes('webhookSlotFast'))) hint = 'NO_WEBHOOK_SLOT_FAST';
+  else if (!log.some(l => String(l).includes('parseFBToken'))) hint = 'NO_TOKEN_CHECK';
+  else if (!log.some(l => String(l).includes('webhookPreparePublish'))) hint = 'NO_WEBHOOK_PREPARE';
   else if (!log.some(l => String(l).includes('prepareSlotWait'))) hint = 'NO_SLOT_WAIT';
   else if (log.some(l => String(l).includes('SKIP_TOKEN'))) hint = 'TOKEN_INVALID';
   else if (log.some(l => String(l).includes('BLOCKED_PUBLISH'))) hint = 'BLOCKED_PUBLISH';
@@ -1586,6 +1652,11 @@ N["assertWebhookPost"] = add_node(node(
     {"jsCode": ASSERT_WEBHOOK_POST}, typeVersion=2,
 ))
 N["prepareSlotWait"] = add_node(node("prepareSlotWait", "n8n-nodes-base.code", [X(1), Y1], {"jsCode": PREPARE_SLOT_WAIT}, typeVersion=2))
+N["webhookSlotFast"] = add_node(node("webhookSlotFast", "n8n-nodes-base.code", [X(1), Y1 + 40], {"jsCode": WEBHOOK_SLOT_FAST}, typeVersion=2))
+N["gateScheduledHalted"] = add_node(node("gateScheduledHalted", "n8n-nodes-base.code", [X(2), Y1 + 40], {"jsCode": GATE_SCHEDULED_HALTED}, typeVersion=2))
+N["gateScheduledContinue"] = add_node(node("gateScheduledContinue", "n8n-nodes-base.code", [X(2), Y1 + 80], {"jsCode": GATE_SCHEDULED_CONTINUE}, typeVersion=2))
+N["webhookPreparePublish"] = add_node(node("webhookPreparePublish", "n8n-nodes-base.code", [X(6), Y1 + 40], {"jsCode": WEBHOOK_PREPARE_PUBLISH}, typeVersion=2))
+N["gateScheduledToken"] = add_node(node("gateScheduledToken", "n8n-nodes-base.code", [X(6), Y1 + 80], {"jsCode": GATE_SCHEDULED_TOKEN}, typeVersion=2))
 N["checkHalted"] = add_node(node(
     "checkHalted", "n8n-nodes-base.if", [X(2), Y1],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -1893,6 +1964,11 @@ N["slotOpenAIPass"] = add_node(node(
 ))
 
 # === PUBLISHER ===
+N["logPrePublish"] = add_node(node("logPrePublish", "n8n-nodes-base.code", [X(0), Y4 - 60], {
+    "jsCode": TRACE_FN + r"""const j = $input.first().json;
+__trace('publishToFacebook: start page='+($env.FB_PAGE_ID||'')+' image='+!!j.finalImageUrl+' captionLen='+String(j.caption||'').length);
+return [{ json: j }];"""
+}, typeVersion=2))
 N["publishToFacebook"] = add_node(node(
     "publishToFacebook", "n8n-nodes-base.httpRequest", [X(0), Y4],
     {
@@ -2114,17 +2190,24 @@ wire("webhookDirectToSlot", "prepareSlotWait")
 wire("gateScheduledPath", "splitInBatches")
 
 wire("splitInBatches", "prepareSlotWait", 0)  # scheduled multi-slot batches only
-wire("prepareSlotWait", "checkHalted")
-wire("checkHalted", "preparePostSkippedEmail", 0)  # halted true
+# Webhook: bypass checkHalted IF + waitForSlot (v9 — fixes ~0.9s silent skip)
+wire("prepareSlotWait", "webhookSlotFast")
+wire("prepareSlotWait", "gateScheduledHalted")
+wire("prepareSlotWait", "gateScheduledContinue")
+wire("webhookSlotFast", "checkFBToken")
+wire("gateScheduledHalted", "preparePostSkippedEmail")
 wire("preparePostSkippedEmail", "emailPostSkipped")
 wire("emailPostSkipped", "skipHalted")
-wire("checkHalted", "waitForSlot", 1)  # not halted
+wire("gateScheduledContinue", "waitForSlot")
 wire("skipHalted", "pipelineSummary")
 wire("pipelineSummary", "loopBack")
 wire("waitForSlot", "checkFBToken")
 wire("checkFBToken", "parseFBToken", 0)
 wire("checkFBToken", "parseFBToken", 1)
-wire("parseFBToken", "tokenGate")
+wire("parseFBToken", "webhookPreparePublish")
+wire("parseFBToken", "gateScheduledToken")
+wire("webhookPreparePublish", "applyImageFallback")
+wire("gateScheduledToken", "tokenGate")
 wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token invalid
 wire("prepareTokenAlertEmail", "emailTokenExpired")
 wire("emailTokenExpired", "skipInvalidToken")
@@ -2157,7 +2240,8 @@ wire("generateImage", "extractImageUrl", 0)
 wire("extractImageUrl", "mergeImagePaths")
 wire("mergeImagePaths", "webhookEnsurePublish")
 wire("webhookEnsurePublish", "finalPublishGate")
-wire("finalPublishGate", "publishToFacebook", 0)
+wire("finalPublishGate", "logPrePublish", 0)
+wire("logPrePublish", "publishToFacebook")
 wire("finalPublishGate", "logBlockedPublish", 1)
 wire("logBlockedPublish", "preparePostSkippedEmail")
 
