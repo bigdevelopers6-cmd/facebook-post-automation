@@ -747,15 +747,16 @@ return [{ json: { ...prev, imageReview: review } }];
 """
 
 APPLY_IMAGE_FALLBACK = r"""const staticData = $getWorkflowStaticData('global');
+const base = $('buildImagePrompt').first().json;
+const item = { ...base, ...($input.first().json || {}) };
 staticData.errorLog = staticData.errorLog || [];
 staticData.errorLog.push({
   timestamp: new Date().toISOString(),
   node_name: 'imageReviewGate',
   error_code: 'IMAGE_FALLBACK_USED',
-  error_message: $input.first().json.imageReview?.reason || 'Image prompt rejected',
-  article_url: $input.first().json.url,
+  error_message: item.imageReview?.reason || 'Image review skipped or rejected',
+  article_url: item.url,
 });
-const item = $input.first().json;
 return [{ json: { ...item, useFallbackImage: true, finalImageUrl: item.urlToImage, imageSource: 'newsapi_fallback' } }];
 """
 
@@ -1733,13 +1734,11 @@ wire("waitForSlot", "checkFBToken")
 wire("checkFBToken", "parseFBToken", 0)
 wire("checkFBToken", "parseFBToken", 1)
 wire("parseFBToken", "tokenGate")
-wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token expired
+wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token invalid
 wire("prepareTokenAlertEmail", "emailTokenExpired")
 wire("emailTokenExpired", "skipInvalidToken")
 wire("skipInvalidToken", "loopBack")
-wire("tokenGate", "prepareSlotStartEmail", 1)  # token ok — caption LLM fallback handles providers
-wire("prepareSlotStartEmail", "emailSlotPostStarting")
-wire("emailSlotPostStarting", "generateCaptionWithFallback")
+wire("tokenGate", "generateCaptionWithFallback", 1)  # token ok — skip slot email (SMTP often unset on server)
 wire("generateCaptionWithFallback", "checkCaptionGenerated")
 wire("checkCaptionGenerated", "prePublishReviewWithFallback", 0)
 wire("checkCaptionGenerated", "haltProduction", 1)
@@ -1759,6 +1758,7 @@ wire("captionReviewReadyGate", "logBlockedPublish", 1)
 
 wire("buildImagePrompt", "imageReview")
 wire("imageReview", "parseImageReview", 0)
+wire("imageReview", "applyImageFallback", 1)  # API error — use NewsAPI photo
 wire("parseImageReview", "imageReviewGate")
 wire("imageReviewGate", "applyImageFallback", 0)  # use NewsAPI image (skip OpenAI DALL-E)
 wire("imageReviewGate", "applyImageFallback", 1)  # rejected prompt — still use NewsAPI image
