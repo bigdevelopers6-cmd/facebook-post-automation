@@ -63,6 +63,17 @@ CAPTION_SYSTEM = (
     "Never use corporate jargon or the words 'crucial', 'delve', 'groundbreaking', or 'game-changer'. Output only the caption text."
 )
 
+VIRAL_COPY_SYSTEM = (
+    "You are a viral US Facebook news graphic copywriter for Power & Fame Daily. "
+    "Given a US politics or celebrity article, return ONLY valid JSON (no markdown) with keys: "
+    "hookLine (short shock hook, caps, may include one emoji), "
+    "headlineLine (1-2 sentence sensational headline, ALL CAPS, under 120 chars), "
+    "bottomLine (1-2 sentence commentary in ALL CAPS, under 140 chars), "
+    "sceneDescription (photorealistic scene: who to show, setting, mood — no text in scene), "
+    "peopleHint (names/roles of 1-3 real public figures relevant to story if applicable). "
+    "Stay factual to the article; no invented dollar amounts unless in the article."
+)
+
 PRE_PUBLISH_SYSTEM = (
     "You are a strict Facebook page compliance officer. Analyze the caption provided and return ONLY a JSON object "
     "with this exact schema: { \"approved\": true/false, \"risk_level\": \"low\"/\"medium\"/\"high\", \"flags\": [], "
@@ -102,7 +113,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v12-posted-cache-file"
+WORKFLOW_BUILD = "2026-05-30-trace-v13-viral-image"
 
 # Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
 TRACE_FN = r"""
@@ -220,6 +231,14 @@ function buildCaptionAbout100(title, description, sourceName) {
   }
   if (!caption.includes('#')) caption += '\n\n' + tags;
   if (countWords(caption) > 115) caption = trimToWordCount(caption, 100) + '\n\n' + tags;
+  return sanitizeCaption(caption);
+}
+function captionWithSource(item) {
+  let caption = buildCaptionAbout100(item.title, item.description, item.source?.name);
+  const src = sanitizeCaption(item.source?.name || 'US News');
+  if (src && !caption.toLowerCase().includes(src.toLowerCase())) {
+    caption += '\n\nSource: ' + src;
+  }
   return sanitizeCaption(caption);
 }
 """
@@ -677,23 +696,6 @@ return [{
 }];
 """
 
-WEBHOOK_ENSURE_PUBLISH = TRACE_FN + CAPTION_UTILS + r"""const sd = $getWorkflowStaticData('global');
-let item = { ...$input.first().json };
-const test = sd.webhookTestMode === true || item.webhookTestMode === true || item.windowLabel === 'test_one';
-if (test) {
-  item.caption = buildCaptionAbout100(item.title, item.description, item.source?.name);
-  item.caption = sanitizeCaption(item.caption);
-  item.captionGenerated = countWords(item.caption) >= 40;
-  item.captionProvider = item.captionProvider || 'webhook_100w';
-  item.aiCaptionApproved = true;
-  item.prePublishReviewPassed = true;
-  item.useFallbackImage = true;
-  item.finalImageUrl = item.finalImageUrl || item.urlToImage;
-  item.aiImageCleared = !!(item.finalImageUrl);
-  __trace('webhookEnsurePublish: caption='+!!item.caption+' image='+!!item.finalImageUrl);
-}
-return [{ json: item }];
-"""
 
 LOG_BLOCKED_PUBLISH = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
@@ -809,6 +811,57 @@ function parseReviewJson(raw) {
   } catch {
     return { approved: false, risk_level: 'high', flags: ['parse_error'], rewrite_needed: true, reason: 'Invalid JSON from reviewer' };
   }
+}
+
+async function llmGroqGeminiOnly(system, user, maxTokens) {
+  const attempts = [];
+  for (const fn of [callGroq, callGemini]) {
+    try {
+      const r = await fn(system, user, maxTokens);
+      attempts.push(r);
+      if (r.ok) return { ok: true, text: r.text, provider: r.provider, attempts };
+    } catch (e) {
+      attempts.push({ ok: false, provider: fn.name, error: e.message });
+    }
+  }
+  return { ok: false, attempts };
+}
+
+function parseViralJson(raw) {
+  try {
+    return JSON.parse(String(raw).replace(/```json|```/g, '').trim());
+  } catch (e) {
+    return null;
+  }
+}
+
+async function callGeminiImage(prompt) {
+  const key = $env.GEMINI_API_KEY;
+  if (!key) return { ok: false, error: 'GEMINI_API_KEY not set' };
+  const models = [
+    'gemini-2.0-flash-exp-image-generation',
+    'gemini-2.0-flash-preview-image-generation',
+  ];
+  let lastErr = 'no model tried';
+  for (const model of models) {
+    const r = await httpJson(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+      {
+        method: 'POST',
+        body: {
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+        },
+      }
+    );
+    const parts = r.body?.candidates?.[0]?.content?.parts || [];
+    for (const p of parts) {
+      const data = p.inlineData?.data || p.inline_data?.data;
+      if (data) return { ok: true, model, base64: data, mime: p.inlineData?.mimeType || 'image/png' };
+    }
+    lastErr = JSON.stringify(r.body?.error || r.body).slice(0, 280);
+  }
+  return { ok: false, error: lastErr };
 }
 """
 
@@ -982,6 +1035,153 @@ if (staticData.errorLog.length > 500) staticData.errorLog = staticData.errorLog.
 return [{ json: { skipped: true, reason: 'SKIPPED_COMPLIANCE', url: $input.first().json.url } }];
 """
 
+GENERATE_VIRAL_COPY = (
+    LLM_HTTP_HELPERS
+    + CAPTION_UTILS
+    + f"""
+const VIRAL_COPY_SYSTEM = {json.dumps(VIRAL_COPY_SYSTEM)};
+const item = $input.first().json;
+const userPrompt = 'Article title: ' + item.title + '\\nDescription: ' + (item.description || '') + '\\nSource: ' + (item.source?.name || 'Unknown') + '\\nTopic: ' + (item._topic || 'news');
+const result = await llmGroqGeminiOnly(VIRAL_COPY_SYSTEM, userPrompt, 700);
+if (!result.ok) {{
+  return [{{ json: {{ ...item, viralCopyOk: false, viralImageReady: false, useFeedLink: true, viralFailReason: 'viral_copy_llm_failed' }} }}];
+}}
+const parsed = parseViralJson(result.text);
+if (!parsed || !parsed.headlineLine) {{
+  return [{{ json: {{ ...item, viralCopyOk: false, viralImageReady: false, useFeedLink: true, viralFailReason: 'viral_copy_parse_failed' }} }}];
+}}
+const hookLine = String(parsed.hookLine || 'BREAKING NEWS').slice(0, 80);
+const headlineLine = String(parsed.headlineLine || item.title).slice(0, 200);
+const bottomLine = String(parsed.bottomLine || 'STAY TUNED FOR UPDATES.').slice(0, 200);
+const sceneDescription = String(parsed.sceneDescription || ('US news scene about: ' + item.title)).slice(0, 400);
+const peopleHint = String(parsed.peopleHint || 'relevant US public figures').slice(0, 120);
+const imagePrompt = [
+  'Vertical 4:5 Facebook viral news graphic, pure black background #000000.',
+  'TOP 55%: cinematic photorealistic photograph — ' + sceneDescription + ' People: ' + peopleHint + '. Dramatic lighting, realistic faces, US news aesthetic. NO text in the photo area.',
+  'MIDDLE: bold stacked headline typography EXACTLY as written:',
+  'Line 1 bright yellow #FFD700: "' + hookLine + '"',
+  'Line 2 mixed cyan #00E5FF, yellow #FFD700, white, green #00FF66: "' + headlineLine + '"',
+  'BOTTOM: rectangular panel with thin red border #FF0000, bold yellow text inside: "' + bottomLine + '"',
+  'High contrast, readable English, viral Power & Fame Daily branding style, no watermarks, no extra logos.',
+].join(' ');
+return [{{ json: {{
+  ...item,
+  viralCopyOk: true,
+  hookLine,
+  headlineLine,
+  bottomLine,
+  sceneDescription,
+  viralImagePrompt: imagePrompt,
+  viralCopyProvider: result.provider,
+}} }}];
+"""
+)
+
+GENERATE_VIRAL_IMAGE_GEMINI = (
+    LLM_HTTP_HELPERS
+    + TRACE_FN
+    + r"""
+const item = $input.first().json;
+if (!item.viralCopyOk || !item.viralImagePrompt) {
+  return [{ json: { ...item, viralImageReady: false, useFeedLink: true } }];
+}
+const imgResult = await callGeminiImage(item.viralImagePrompt);
+if (!imgResult.ok) {
+  __trace('generateViralImage: FAIL ' + String(imgResult.error || '').slice(0, 120));
+  return [{ json: { ...item, viralImageReady: false, useFeedLink: true, viralFailReason: 'gemini_image_' + String(imgResult.error || '').slice(0, 80) } }];
+}
+const fs = require('fs');
+const path = '/data/reports/viral-post.png';
+try {
+  fs.writeFileSync(path, Buffer.from(imgResult.base64, 'base64'));
+} catch (e) {
+  __trace('generateViralImage: write FAIL ' + e.message);
+  return [{ json: { ...item, viralImageReady: false, useFeedLink: true, viralFailReason: 'write_fail' } }];
+}
+__trace('generateViralImage: OK model=' + imgResult.model + ' path=' + path);
+return [{ json: {
+  ...item,
+  viralImageReady: true,
+  viralImagePath: path,
+  finalImageUrl: path,
+  useFeedLink: false,
+  useFallbackImage: false,
+  imageSource: 'gemini_viral_' + imgResult.model,
+  aiImageCleared: true,
+}}];
+"""
+)
+
+APPLY_VIRAL_PUBLISH = TRACE_FN + CAPTION_UTILS + r"""
+const item = $input.first().json;
+let caption = captionWithSource(item);
+if (item.viralImageReady && item.viralImagePath) {
+  caption = sanitizeCaption(caption);
+  __trace('applyViralPublish: photo mode words=' + countWords(caption) + ' source=' + String(item.source?.name||''));
+  return [{ json: {
+    ...item,
+    caption,
+    captionGenerated: true,
+    useFeedLink: false,
+    publishLink: null,
+    aiCaptionApproved: true,
+    prePublishReviewPassed: true,
+    aiImageCleared: true,
+  }}];
+}
+const fallbackImg = item.urlToImage || item.url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
+__trace('applyViralPublish: link fallback words=' + countWords(caption) + ' link=' + String(item.url||'').slice(0,55));
+return [{ json: {
+  ...item,
+  caption,
+  captionGenerated: true,
+  useFeedLink: true,
+  publishLink: item.url || item.publishLink,
+  finalImageUrl: fallbackImg,
+  aiImageCleared: true,
+}}];
+"""
+
+PUBLISH_PHOTO_FACEBOOK = TRACE_FN + r"""
+const item = $input.first().json;
+const pageId = $env.FB_PAGE_ID;
+const token = $env.FB_ACCESS_TOKEN;
+const fs = require('fs');
+let response;
+try {
+  if (item.viralImagePath && fs.existsSync(item.viralImagePath)) {
+    const buffer = fs.readFileSync(item.viralImagePath);
+    response = await this.helpers.httpRequest({
+      method: 'POST',
+      url: 'https://graph.facebook.com/v19.0/' + pageId + '/photos',
+      formData: {
+        message: item.caption,
+        access_token: token,
+        source: { value: buffer, options: { filename: 'viral-post.png', contentType: 'image/png' } },
+      },
+    });
+    __trace('publishPhotoFacebook: uploaded viral image file');
+  } else if (item.finalImageUrl && String(item.finalImageUrl).startsWith('http')) {
+    response = await this.helpers.httpRequest({
+      method: 'POST',
+      url: 'https://graph.facebook.com/v19.0/' + pageId + '/photos',
+      formData: {
+        message: item.caption,
+        access_token: token,
+        url: item.finalImageUrl,
+      },
+    });
+    __trace('publishPhotoFacebook: url image');
+  } else {
+    throw new Error('no image available for photo post');
+  }
+  const postId = response.id || response.post_id || response.body?.id;
+  return [{ json: { ...item, ...response, id: postId, post_id: postId } }];
+} catch (e) {
+  throw new Error('PUBLISH_PHOTO_FAIL: ' + e.message);
+}
+"""
+
 BUILD_IMAGE_PROMPT = r"""const item = $input.first().json;
 const topic = item._topic || 'news';
 const imagePrompt = `Photorealistic candid US ${topic} news photograph about: ${item.title}. Natural unstaged moment, real people and environments, soft daylight, shallow depth of field, looks like a professional press photo taken on location — not AI art, not illustration. Consistent brand color grading on every post: warm golden yellow highlights, rich red accents, and deep green tones in clothing, decor, lighting, or background. Cohesive yellow-red-green palette across the frame. Authentic Facebook news Page aesthetic, relatable and human. NO text, NO logos, NO watermarks, NO signs with words, NO graphic design layout, NO cartoon, NO embedded emoji characters painted in the image.`;
@@ -1030,7 +1230,7 @@ return [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageS
 
 
 HANDLE_PUBLISH_SUCCESS = TRACE_FN + POSTED_CACHE_FN + r"""const response = $input.first().json;
-const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json || $('webhookPreparePublish').first()?.json;
+const item = $('applyViralPublish').first()?.json || $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json || $('webhookPreparePublish').first()?.json;
 const postId = response.id || response.post_id || '';
 if (item.url) markUrlPosted(item.url);
 const staticData = $getWorkflowStaticData('global');
@@ -1197,37 +1397,13 @@ return $input.all();
 WEBHOOK_PREPARE_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + CAPTION_UTILS + r"""const sd = $getWorkflowStaticData('global');
 if (!__isWebhookRun(sd)) return [];
 const item = $input.first().json;
-const caption = buildCaptionAbout100(item.title, item.description, item.source?.name);
-const wc = countWords(caption);
-const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
-let img = item.finalImageUrl || item.urlToImage || '';
-function isDirectImageUrl(u) {
-  if (!u || typeof u !== 'string') return false;
-  try {
-    const url = new URL(u);
-    const p = url.pathname.toLowerCase();
-    if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(p)) return true;
-    const h = url.hostname;
-    if (/unsplash|cloudfront|akamai|imgur|fbcdn|googleusercontent|images\.|i\.imgur/i.test(h)) return true;
-  } catch (e) { return false; }
-  return false;
-}
-if (!isDirectImageUrl(img)) img = PLACEHOLDER_IMAGE;
-__trace('webhookPreparePublish: words='+wc+' tokenValid='+item.tokenValid+' url='+String(item.url||'').slice(0,50));
+__trace('webhookPreparePublish: start viral pipeline url='+String(item.url||'').slice(0,55));
 return [{ json: {
   ...item,
   halted: false,
   skipPosting: false,
-  caption,
-  captionGenerated: true,
-  captionProvider: item.captionProvider || 'webhook_fast',
   aiCaptionApproved: true,
   prePublishReviewPassed: true,
-  useFallbackImage: true,
-  finalImageUrl: img,
-  aiImageCleared: true,
-  useFeedLink: true,
-  publishLink: item.url || item.publishLink,
   webhookTestMode: true,
   webhookRoute: 'webhook',
 }}];
@@ -1254,9 +1430,13 @@ if (!isDirectImageUrl(finalImageUrl)) {
   __trace('prepareFacebookPublish: non-direct image, placeholder was='+String(finalImageUrl).slice(0,70));
   finalImageUrl = PLACEHOLDER_IMAGE;
 }
-const useFeedLink = webhook || item.useFeedLink === true;
-const publishLink = item.publishLink || item.url || '';
-__trace('prepareFacebookPublish: mode='+(useFeedLink?'feed_link':'photo')+' img='+String(finalImageUrl).slice(0,70));
+const useFeedLink = item.useFeedLink === true;
+const publishLink = useFeedLink ? (item.publishLink || item.url || '') : '';
+let photoPath = item.viralImagePath || '';
+if (!photoPath && finalImageUrl.startsWith('/')) photoPath = finalImageUrl;
+if (item.viralImageReady && photoPath) finalImageUrl = photoPath;
+else if (useFeedLink) finalImageUrl = finalImageUrl || item.urlToImage || item.url || PLACEHOLDER_IMAGE;
+__trace('prepareFacebookPublish: mode='+(useFeedLink?'feed_link':'viral_photo')+' words='+countWords(item.caption)+' source='+String(item.source?.name||''));
 return [{ json: { ...item, finalImageUrl, useFeedLink, publishLink, aiImageCleared: true } }];
 """
 
@@ -2031,7 +2211,10 @@ N["rewriteCaptionWithFallback"] = add_node(node(
     typeVersion=2,
 ))
 N["logSkippedCompliance"] = add_node(node("logSkippedCompliance", "n8n-nodes-base.code", [X(14), Y2 + 240], {"jsCode": LOG_SKIPPED}, typeVersion=2))
-N["buildImagePrompt"] = add_node(node("buildImagePrompt", "n8n-nodes-base.code", [X(12), Y2], {"jsCode": BUILD_IMAGE_PROMPT}, typeVersion=2))
+N["generateViralCopy"] = add_node(node("generateViralCopy", "n8n-nodes-base.code", [X(12), Y2], {"jsCode": GENERATE_VIRAL_COPY}, typeVersion=2))
+N["generateViralImageGemini"] = add_node(node("generateViralImageGemini", "n8n-nodes-base.code", [X(13), Y2], {"jsCode": GENERATE_VIRAL_IMAGE_GEMINI}, typeVersion=2))
+N["applyViralPublish"] = add_node(node("applyViralPublish", "n8n-nodes-base.code", [X(14), Y2], {"jsCode": APPLY_VIRAL_PUBLISH}, typeVersion=2))
+N["buildImagePrompt"] = add_node(node("buildImagePrompt", "n8n-nodes-base.code", [X(12), Y2 + 200], {"jsCode": BUILD_IMAGE_PROMPT}, typeVersion=2))
 
 IMAGE_REVIEW_SYSTEM = (
     "You are an image compliance officer for a US Facebook news page. You will receive an image generation prompt. "
@@ -2086,7 +2269,6 @@ N["generateImage"] = add_node(node(
 N["extractImageUrl"] = add_node(node("extractImageUrl", "n8n-nodes-base.code", [X(17), Y2], {"jsCode": EXTRACT_IMAGE_URL}, typeVersion=2))
 N["applyImageFallback"] = add_node(node("applyImageFallback", "n8n-nodes-base.code", [X(16), Y2 + 120], {"jsCode": APPLY_IMAGE_FALLBACK}, typeVersion=2))
 N["mergeImagePaths"] = add_node(node("mergeImagePaths", "n8n-nodes-base.code", [X(18), Y2], {"jsCode": MERGE_IMAGE_PATHS}, typeVersion=2))
-N["webhookEnsurePublish"] = add_node(node("webhookEnsurePublish", "n8n-nodes-base.code", [X(18), Y2 + 60], {"jsCode": WEBHOOK_ENSURE_PUBLISH}, typeVersion=2))
 N["finalPublishGate"] = add_node(node(
     "finalPublishGate", "n8n-nodes-base.if", [X(19), Y2],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -2146,8 +2328,9 @@ return [{ json: j }];"""
 N["prepareFacebookPublish"] = add_node(node("prepareFacebookPublish", "n8n-nodes-base.code", [X(0), Y4 - 30], {"jsCode": PREPARE_FACEBOOK_PUBLISH}, typeVersion=2))
 N["gatePublishPhoto"] = add_node(node("gatePublishPhoto", "n8n-nodes-base.code", [X(0), Y4 - 10], {"jsCode": GATE_PUBLISH_PHOTO}, typeVersion=2))
 N["gatePublishFeed"] = add_node(node("gatePublishFeed", "n8n-nodes-base.code", [X(0), Y4 + 10], {"jsCode": GATE_PUBLISH_FEED}, typeVersion=2))
+N["publishPhotoFacebook"] = add_node(node("publishPhotoFacebook", "n8n-nodes-base.code", [X(0), Y4], {"jsCode": PUBLISH_PHOTO_FACEBOOK}, typeVersion=2))
 N["publishToFacebook"] = add_node(node(
-    "publishToFacebook", "n8n-nodes-base.httpRequest", [X(0), Y4],
+    "publishToFacebook", "n8n-nodes-base.httpRequest", [X(0), Y4 + 80],
     {
         "method": "POST",
         "url": "={{ 'https://graph.facebook.com/v19.0/' + ($env.FB_PAGE_ID || '') + '/photos' }}",
@@ -2398,7 +2581,7 @@ wire("checkFBToken", "parseFBToken", 0)
 wire("checkFBToken", "parseFBToken", 1)
 wire("parseFBToken", "webhookPreparePublish")
 wire("parseFBToken", "gateScheduledToken")
-wire("webhookPreparePublish", "applyImageFallback")
+wire("webhookPreparePublish", "generateViralCopy")
 wire("gateScheduledToken", "tokenGate")
 wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token invalid
 wire("prepareTokenAlertEmail", "emailTokenExpired")
@@ -2421,26 +2604,27 @@ wire("extractCaptionGemini", "gateCaptionGemini")
 wire("gateCaptionGemini", "prePublishAuto", 0)
 wire("gateCaptionGemini", "haltLlmFailed", 1)
 wire("haltLlmFailed", "haltProduction")
-wire("prePublishAuto", "buildImagePrompt")
-wire("buildImagePrompt", "applyImageFallback")
-wire("applyImageFallback", "mergeImagePaths")
+wire("prePublishAuto", "generateViralCopy")
+wire("generateViralCopy", "generateViralImageGemini")
+wire("generateViralImageGemini", "applyViralPublish")
 wire("slotApiGateOpenAI", "evaluateSlotOpenAI")
 wire("evaluateSlotOpenAI", "slotOpenAIPass")
 wire("slotOpenAIPass", "generateImage", 0)
 wire("slotOpenAIPass", "haltProduction", 1)
 wire("generateImage", "extractImageUrl", 0)
 wire("extractImageUrl", "mergeImagePaths")
-wire("mergeImagePaths", "webhookEnsurePublish")
-wire("webhookEnsurePublish", "finalPublishGate")
+wire("applyViralPublish", "finalPublishGate")
 wire("finalPublishGate", "logPrePublish", 0)
 wire("logPrePublish", "prepareFacebookPublish")
 wire("prepareFacebookPublish", "gatePublishPhoto")
 wire("prepareFacebookPublish", "gatePublishFeed")
-wire("gatePublishPhoto", "publishToFacebook")
+wire("gatePublishPhoto", "publishPhotoFacebook")
 wire("gatePublishFeed", "publishFeedLink")
 wire("finalPublishGate", "logBlockedPublish", 1)
 wire("logBlockedPublish", "preparePostSkippedEmail")
 
+wire("publishPhotoFacebook", "handlePublishSuccess", 0)
+wire("publishPhotoFacebook", "handlePublishError", 1)
 wire("publishToFacebook", "handlePublishSuccess", 0)
 wire("publishToFacebook", "handlePublishError", 1)
 wire("publishFeedLink", "handlePublishSuccess", 0)

@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v12-posted-cache-file}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v13-viral-image}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -55,10 +55,10 @@ fetch_execution_json() {
 preflight() {
   local markers
   markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  v12=$(grep -c 'trace-v12-posted-cache-file' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  echo "Workflow: trace-v12=$v12 pipelineLog-fn=$markers (want v12>=1, fn=0)"
-  if [ "${v12:-0}" -lt 1 ]; then
-    echo "[!!] FAILED  OLD workflow JSON on server."
+  v13=$(grep -c 'trace-v13-viral-image' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  echo "Workflow: trace-v13=$v13 pipelineLog-fn=$markers (want v13>=1, fn=0)"
+  if [ "${v13:-0}" -lt 1 ]; then
+    echo "[!!] FAILED  OLD workflow JSON on server (need trace-v13-viral-image)."
     echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
     exit 1
   fi
