@@ -11,10 +11,10 @@ services:
     environment:
       - TZ=America/New_York
       - GENERIC_TIMEZONE=America/New_York
-      - N8N_HOST=REPLACE_WITH_PUBLIC_IP
+      - N8N_HOST=3.23.247.238
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://REPLACE_WITH_PUBLIC_IP:5678/
+      - WEBHOOK_URL=http://3.23.247.238:5678/
       - N8N_ALERT_FROM=bigdevelopers6@gmail.com
       - N8N_ALERT_TO=talhazahoor786@gmail.com
       - FB_PAGE_ID=1191676374021102
