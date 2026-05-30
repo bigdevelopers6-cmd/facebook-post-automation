@@ -597,6 +597,41 @@ function parseReviewJson(raw) {
 }
 """
 
+EXTRACT_CAPTION_FROM_API = r"""const j = $input.first().json;
+const item = $('prepareSlotWait').first().json;
+const text = (j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+const provider = j.content ? 'anthropic' : (j.choices ? 'groq' : (j.candidates ? 'gemini' : 'unknown'));
+return [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: text.length > 20, rewriteAttempt: 0 } }];
+"""
+
+PRE_PUBLISH_AUTO = r"""const item = $input.first().json;
+return [{ json: {
+  ...item,
+  review: { approved: true, risk_level: 'low', flags: [], rewrite_needed: false, reason: 'auto_pass' },
+  aiCaptionApproved: true,
+  prePublishReviewPassed: true,
+} }];
+"""
+
+HALT_LLM_FAILED = r"""const staticData = $getWorkflowStaticData('global');
+const item = $('prepareSlotWait').first().json;
+staticData.productionHalted = true;
+staticData.productionHaltReason = 'ALL_LLM_CAPTION_PROVIDERS_FAILED';
+return [{ json: {
+  ...item,
+  captionGenerated: false,
+  haltReason: 'ALL_LLM_CAPTION_PROVIDERS_FAILED',
+  failureSummary: 'Claude, Groq, and Gemini all failed. Run: docker compose down',
+  stopServerRecommended: true,
+} }];
+"""
+
+CAPTION_USER_BODY = (
+    '"Write a Facebook caption for this US politics/celebrity story. '
+    'Title: " + $json.title + ". Description: " + ($json.description || "") '
+    '+ ". Source: " + ($json.source?.name || "Unknown")'
+)
+
 GENERATE_CAPTION_WITH_FALLBACK = (
     LLM_HTTP_HELPERS
     + f"""
