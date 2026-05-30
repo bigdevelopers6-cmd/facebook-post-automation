@@ -77,5 +77,13 @@ docker exec facebook-news-n8n sh -c '
 ' 2>/dev/null || echo "(docker exec failed)"
 
 echo ""
+echo "=== Pipeline file log ==="
+if [ -f data/reports/pipeline.log ]; then
+  tail -35 data/reports/pipeline.log
+else
+  echo "(no data/reports/pipeline.log — deploy v8 and run test)"
+fi
+
+echo ""
 echo "=== Last docker [PIPELINE] lines ==="
 docker logs facebook-news-n8n --tail 60 2>&1 | grep -iE '\[PIPELINE\]|WEBHOOK_TEST|Problem in node|assertWebhook' | tail -20 || true

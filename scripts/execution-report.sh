@@ -74,11 +74,19 @@ if hints.get("last_nodes"):
 PY
 
 echo ""
-echo "=== 4. Docker logs (5 min) ==="
-docker logs facebook-news-n8n --since 5m 2>&1 | grep -iE '\[PIPELINE\]|Problem in node|Error in node|MERGE_|FILTER_|haltProduction|evaluateProduction' | tail -50 || echo "(no matching lines — try: docker logs facebook-news-n8n --tail 80)"
+echo "=== 4. Pipeline file log (data/reports/pipeline.log) ==="
+if [ -f data/reports/pipeline.log ]; then
+  tail -40 data/reports/pipeline.log
+else
+  echo "(no data/reports/pipeline.log — run one webhook test after v8 deploy)"
+fi
 
 echo ""
-echo "=== 5. Recent executions ==="
+echo "=== 5. Docker logs (5 min) ==="
+docker logs facebook-news-n8n --since 5m 2>&1 | grep -iE '\[PIPELINE\]|Problem in node|Error in node|WEBHOOK_TEST' | tail -50 || echo "(no matching lines — try: docker logs facebook-news-n8n --tail 80)"
+
+echo ""
+echo "=== 6. Recent executions ==="
 curl -s -b /tmp/n8n-cookies.txt \
   "http://localhost:5678/rest/executions?limit=5&workflowId=$WF_ID" | python3 -c "
 import sys, json

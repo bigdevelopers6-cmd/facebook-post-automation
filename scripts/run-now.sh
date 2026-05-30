@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v7g-empty-gate}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v8-webhook-direct}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -55,9 +55,9 @@ fetch_execution_json() {
 preflight() {
   local markers
   markers=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  v7=$(grep -c 'trace-v7g-empty-gate' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
-  echo "Workflow: trace-v7g=$v7 pipelineLog-fn=$markers (want v7g>=1, fn=0)"
-  if [ "${v7:-0}" -lt 1 ]; then
+  v8=$(grep -c 'trace-v8-webhook-direct' workflow/facebook-us-news-automation.json 2>/dev/null || echo 0)
+  echo "Workflow: trace-v8=$v8 pipelineLog-fn=$markers (want v8>=1, fn=0)"
+  if [ "${v8:-0}" -lt 1 ]; then
     echo "[!!] FAILED  OLD workflow JSON on server."
     echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
     exit 1
@@ -161,7 +161,9 @@ try:
     text = " ".join(errs)
     if "WEBHOOK_TEST_NO_POST_" in text or "WEBHOOK_TEST_NO_POST_" in raw:
         print("\n[!!] NO POST — read 'data.error' / Trace above")
-        if "SKIP_TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
+        if "ROUTE_FAILED" in text or "NO_SLOT_WAIT" in text or "webhookDirectToSlot" not in open("data/reports/pipeline.log", encoding="utf-8", errors="replace").read() if __import__("os").path.isfile("data/reports/pipeline.log") else "":
+            print("    Likely fix: bash scripts/server-deploy.sh (need v8 webhookDirectToSlot)")
+        elif "SKIP_TOKEN_INVALID" in text or "TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
             print("    Likely fix: renew FB_ACCESS_TOKEN in .env, then docker compose up -d")
         elif "BLOCKED_PUBLISH" in text:
             print("    Likely fix: caption/LLM keys (ANTHROPIC/GROQ/GEMINI) or image gate")

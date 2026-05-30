@@ -102,7 +102,31 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7g-empty-gate"
+WORKFLOW_BUILD = "2026-05-30-trace-v8-webhook-direct"
+
+# Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
+TRACE_FN = r"""
+function __trace(msg) {
+  const __sd = $getWorkflowStaticData('global');
+  (__sd.pipelineLog=__sd.pipelineLog||[]).push(msg);
+  try { require('fs').appendFileSync('/data/reports/pipeline.log', new Date().toISOString()+' '+msg+'\n'); } catch(e) {}
+  console.log('[PIPELINE]', msg);
+}
+"""
+
+IS_WEBHOOK_FN = r"""
+function __isWebhookRun(sd) {
+  if (!sd) sd = $getWorkflowStaticData('global');
+  if (sd.webhookTestMode === true) return true;
+  const log = sd.pipelineLog || [];
+  if (log.some(l => String(l).includes('webhookSetup') || String(l).includes('webhookDirect'))) return true;
+  try {
+    const j = $('webhookSetup').first().json;
+    if (j && (j.command === 'test-one' || j.mode === 'single_slot')) return true;
+  } catch (e) {}
+  return false;
+}
+"""
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -406,10 +430,14 @@ return items.map((article, idx) => {
 });
 """
 
-PREPARE_SLOT_WAIT = r"""const staticData = $getWorkflowStaticData('global');
+PREPARE_SLOT_WAIT = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
 const item = $input.first().json;
 const webhookTestMode = staticData.webhookTestMode === true || item.webhookTestMode === true;
 const webhookRoute = item.webhookRoute || (webhookTestMode ? 'webhook' : 'scheduled');
+if (item.webhookDirectReady) {
+  __trace('prepareSlotWait: from webhookDirectToSlot');
+  return [{ json: { ...item, webhookDirectReady: false, webhookRoute, webhookTestMode } }];
+}
 if (staticData.forcePostTest) {
   staticData.forcePostTest = false;
   const __sdS=$getWorkflowStaticData('global');
@@ -894,16 +922,15 @@ return [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageS
 """
 
 
-HANDLE_PUBLISH_SUCCESS = r"""const response = $input.first().json;
+HANDLE_PUBLISH_SUCCESS = TRACE_FN + r"""const response = $input.first().json;
 const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;
 const postId = response.id || response.post_id || '';
-const __sdP=$getWorkflowStaticData('global');
-(__sdP.pipelineLog=__sdP.pipelineLog||[]).push('PUBLISH_OK postId='+postId);
-console.log('[PIPELINE] PUBLISH_OK', postId);
+__trace('PUBLISH_OK postId='+postId);
 return [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];
 """
 
-HANDLE_PUBLISH_ERROR = r"""const staticData = $getWorkflowStaticData('global');
+HANDLE_PUBLISH_ERROR = TRACE_FN + r"""const staticData = $getWorkflowStaticData('global');
+__trace('PUBLISH_FAIL: '+JSON.stringify($input.first().json).slice(0,200));
 staticData.consecutiveFailures = (staticData.consecutiveFailures || 0) + 1;
 staticData.errorLog = staticData.errorLog || [];
 let ctx = {};
@@ -1073,7 +1100,8 @@ staticData.lastApiGateFailures = [];
 return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 """
 
-AUTO_TEST_ONE = rf"""const staticData = $getWorkflowStaticData('global');
+AUTO_TEST_ONE = TRACE_FN + IS_WEBHOOK_FN + rf"""const staticData = $getWorkflowStaticData('global');
+try {{ require('fs').writeFileSync('/data/reports/pipeline.log', ''); }} catch(e) {{}}
 staticData.pipelineLog = ['BUILD={WORKFLOW_BUILD} webhookSetup'];
 staticData.webhookBypassGate = true;
 staticData.webhookTestMode = true;
@@ -1090,8 +1118,8 @@ staticData.circuitBreakerHalted = false;
 staticData.productionHalted = false;
 staticData.apisHealthy = null;
 staticData.lastApiGateFailures = [];
-console.log('[PIPELINE] webhookSetup {WORKFLOW_BUILD}');
-return [{{ json: {{ command: 'test-one', mode: 'single_slot', build: '{WORKFLOW_BUILD}' }} }}];
+__trace('webhookSetup {WORKFLOW_BUILD}');
+return [{{ json: {{ command: 'test-one', mode: 'single_slot', build: '{WORKFLOW_BUILD}', webhookRoute: 'webhook' }} }}];
 """
 
 AUTO_REVIEW_LOG = r"""const staticData = $getWorkflowStaticData('global');
@@ -1126,28 +1154,27 @@ CATEGORY_PREP = r"""const __sdC=$getWorkflowStaticData('global');
 console.log('[PIPELINE] prepareCategory');
 return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];"""
 
-ASSERT_WEBHOOK_POST = r"""const staticData = $getWorkflowStaticData('global');
+ASSERT_WEBHOOK_POST = TRACE_FN + IS_WEBHOOK_FN + r"""const staticData = $getWorkflowStaticData('global');
 const log = staticData.pipelineLog || [];
-const wasWebhook = staticData.webhookBypassGate === true || staticData.webhookTestMode === true;
+const wasWebhook = __isWebhookRun(staticData) || staticData.webhookBypassGate === true;
+const published = log.some(l => String(l).includes('PUBLISH_OK'));
+__trace('assertWebhookPost: wasWebhook='+wasWebhook+' published='+published);
+if (wasWebhook && !published) {
+  const trace = log.slice(-30).join(' | ');
+  let hint = 'UNKNOWN';
+  if (!log.some(l => String(l).includes('webhookDirectToSlot: GO'))) hint = 'ROUTE_FAILED_no_webhookDirect';
+  else if (!log.some(l => String(l).includes('prepareSlotWait'))) hint = 'NO_SLOT_WAIT';
+  else if (log.some(l => String(l).includes('SKIP_TOKEN'))) hint = 'TOKEN_INVALID';
+  else if (log.some(l => String(l).includes('BLOCKED_PUBLISH'))) hint = 'BLOCKED_PUBLISH';
+  else if (log.some(l => String(l).includes('SKIP_HALTED'))) hint = 'SLOT_HALTED';
+  else if (log.some(l => String(l).includes('PUBLISH_FAIL'))) hint = 'FACEBOOK_PUBLISH_ERROR';
+  let fileTail = '';
+  try { fileTail = require('fs').readFileSync('/data/reports/pipeline.log', 'utf8').slice(-2500); } catch(e) {}
+  throw new Error('WEBHOOK_TEST_NO_POST_'+hint+' Trace='+trace+' FileLogTail='+fileTail);
+}
 staticData.webhookBypassGate = false;
 staticData.webhookTestMode = false;
-const __sdA=$getWorkflowStaticData('global');
-(__sdA.pipelineLog=__sdA.pipelineLog||[]).push('assertWebhookPost: wasWebhook='+wasWebhook+' published='+log.some(l=>String(l).includes('PUBLISH_OK')));
-console.log('[PIPELINE] assertWebhookPost', wasWebhook, log.slice(-8).join(' | '));
-if (wasWebhook) {
-  const published = log.some(l => String(l).includes('PUBLISH_OK'));
-  if (!published) {
-    const trace = log.slice(-25).join(' | ');
-    let hint = 'see trace';
-    if (!log.some(l => String(l).includes('pickFirstArticle'))) hint = 'ROUTE_FAILED_no_pickFirstArticle';
-    else if (!log.some(l => String(l).includes('prepareSlotWait'))) hint = 'LOOP_EMPTY_no_slot_wait';
-    else if (log.some(l => String(l).includes('SKIP_TOKEN'))) hint = 'TOKEN_INVALID';
-    else if (log.some(l => String(l).includes('BLOCKED_PUBLISH'))) hint = 'BLOCKED_PUBLISH';
-    else if (log.some(l => String(l).includes('SKIP_HALTED'))) hint = 'SLOT_HALTED';
-    throw new Error('WEBHOOK_TEST_NO_POST_'+hint+' Trace='+trace);
-  }
-}
-return [{ json: { webhookAssert: wasWebhook ? 'posted' : 'scheduled_done', trace: log.slice(-30) } }];
+return [{ json: { webhookAssert: wasWebhook ? (published ? 'posted' : 'failed') : 'scheduled_done', trace: log.slice(-30) } }];
 """
 
 MERGE_NEWS_FEEDS = r"""function safeArticles(nodeName) {
@@ -1181,53 +1208,63 @@ console.log('FILTER_ARTICLES count=' + (j.articles || []).length + ' needed=' + 
 return [$input.first()];
 """
 
-LOG_MERGE_STATS = r"""const items = $input.all();
+LOG_MERGE_STATS = TRACE_FN + IS_WEBHOOK_FN + r"""const items = $input.all();
 const sd = $getWorkflowStaticData('global');
-const webhookTest = sd.webhookTestMode === true;
+const webhookTest = __isWebhookRun(sd);
 const webhookRoute = webhookTest ? 'webhook' : 'scheduled';
-const __sdL=$getWorkflowStaticData('global');
-(__sdL.pipelineLog=__sdL.pipelineLog||[]).push('logMergeStats: items='+items.length+' route='+webhookRoute);
-console.log('[PIPELINE] logMergeStats', items.length, webhookRoute);
+if (webhookTest) sd.webhookTestMode = true;
+__trace('logMergeStats: items='+items.length+' route='+webhookRoute+' flag='+sd.webhookTestMode);
 if (items.length === 0) {
   throw new Error('LOG_MERGE_STATS: 0 items — check filter/merge path');
 }
 return items.map(i => ({ json: { ...i.json, webhookTestMode: webhookTest, webhookRoute } }));
 """
 
-PICK_FIRST_ARTICLE = r"""const items = $input.all();
-const __sdP=$getWorkflowStaticData('global');
-(__sdP.pipelineLog=__sdP.pipelineLog||[]).push('pickFirstArticle: n='+items.length);
-if (items.length === 0) {
-  throw new Error('pickFirstArticle: 0 items — logMergeStats failed');
-}
-return [{ json: { ...items[0].json, webhookTestMode: true, webhookRoute: 'webhook' } }];
-"""
-
-# n8n: return [] to skip a branch (no IF node — works when IF expressions fail on this host)
-GATE_WEBHOOK_PATH = r"""const sd = $getWorkflowStaticData('global');
+# Webhook: skip splitInBatches entirely — single wire to prepareSlotWait
+WEBHOOK_DIRECT_TO_SLOT = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
 const items = $input.all();
-if (sd.webhookTestMode !== true) {
+if (!__isWebhookRun(sd)) {
+  __trace('webhookDirectToSlot: skip (scheduled run)');
   return [];
 }
-const __sdG=$getWorkflowStaticData('global');
-(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('gateWebhookPath: items='+items.length);
+sd.webhookTestMode = true;
+if (items.length === 0) throw new Error('webhookDirectToSlot: 0 items');
+const item = items[0].json;
+const schedule = sd.todaySchedule || [{}];
+const slot = schedule[0] || {};
+__trace('webhookDirectToSlot: GO items='+items.length+' title='+String(item.title||'').slice(0,50));
+return [{ json: {
+  ...item,
+  slotIndex: slot.slotIndex || 1,
+  epochMs: slot.epochMs || Date.now(),
+  windowLabel: slot.windowLabel || 'test_one',
+  scheduledEt: slot.scheduledEt || 'now',
+  webhookRoute: 'webhook',
+  webhookTestMode: true,
+  waitMs: 0,
+  halted: false,
+  webhookDirectReady: true,
+}}];
+"""
+
+# n8n: return [] to skip a branch (no IF node)
+
+GATE_SCHEDULED_PATH = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+const items = $input.all();
+if (__isWebhookRun(sd)) {
+  __trace('gateScheduledPath: skip (webhook uses direct path)');
+  return [];
+}
+__trace('gateScheduledPath: items='+items.length);
 return items;
 """
 
-GATE_SCHEDULED_PATH = r"""const sd = $getWorkflowStaticData('global');
-const items = $input.all();
-if (sd.webhookTestMode === true) {
+GATE_WEBHOOK_LOOP_END = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+const j = $input.first()?.json || {};
+if (j.webhookRoute !== 'webhook' && !__isWebhookRun(sd)) {
   return [];
 }
-const __sdG=$getWorkflowStaticData('global');
-(__sdG.pipelineLog=__sdG.pipelineLog||[]).push('gateScheduledPath: items='+items.length);
-return items;
-"""
-
-GATE_WEBHOOK_LOOP_END = r"""const sd = $getWorkflowStaticData('global');
-if (sd.webhookTestMode !== true) {
-  return [];
-}
+__trace('gateWebhookLoopEnd: to assert');
 return $input.all();
 """
 
@@ -1536,9 +1573,8 @@ N["passthroughNoFallback"] = add_node(node("passthroughNoFallback", "n8n-nodes-b
 }, typeVersion=2))
 N["mergeScheduleWithArticles"] = add_node(node("mergeScheduleWithArticles", "n8n-nodes-base.code", [X(10), Y1], {"jsCode": MERGE_SCHEDULE_ARTICLES}, typeVersion=2))
 N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10), Y1 + 80], {"jsCode": LOG_MERGE_STATS}, typeVersion=2))
-N["gateWebhookPath"] = add_node(node("gateWebhookPath", "n8n-nodes-base.code", [X(10), Y1 + 120], {"jsCode": GATE_WEBHOOK_PATH}, typeVersion=2))
+N["webhookDirectToSlot"] = add_node(node("webhookDirectToSlot", "n8n-nodes-base.code", [X(11), Y1 + 120], {"jsCode": WEBHOOK_DIRECT_TO_SLOT}, typeVersion=2))
 N["gateScheduledPath"] = add_node(node("gateScheduledPath", "n8n-nodes-base.code", [X(10), Y1 + 160], {"jsCode": GATE_SCHEDULED_PATH}, typeVersion=2))
-N["pickFirstArticle"] = add_node(node("pickFirstArticle", "n8n-nodes-base.code", [X(11), Y1 + 120], {"jsCode": PICK_FIRST_ARTICLE}, typeVersion=2))
 
 # === LOOP ===
 N["splitInBatches"] = add_node(node(
@@ -2072,10 +2108,9 @@ wire("fetchFallbackNews", "fillRemainingSlots", 0)
 wire("fillRemainingSlots", "mergeScheduleWithArticles")
 wire("passthroughNoFallback", "mergeScheduleWithArticles")
 wire("mergeScheduleWithArticles", "logMergeStats")
-wire("logMergeStats", "gateWebhookPath")
+wire("logMergeStats", "webhookDirectToSlot")
 wire("logMergeStats", "gateScheduledPath")
-wire("gateWebhookPath", "pickFirstArticle")
-wire("pickFirstArticle", "prepareSlotWait")
+wire("webhookDirectToSlot", "prepareSlotWait")
 wire("gateScheduledPath", "splitInBatches")
 
 wire("splitInBatches", "prepareSlotWait", 0)  # scheduled multi-slot batches only
