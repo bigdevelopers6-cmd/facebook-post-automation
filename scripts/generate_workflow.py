@@ -97,18 +97,13 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v3"
+WORKFLOW_BUILD = "2026-05-30-trace-v4"
 
 PIPELINE_LOG_FN = r"""
 function pipelineLog(msg) {
   const nodeName = (typeof $node !== 'undefined' && $node.name) ? $node.name : 'unknown';
-  const line = `${new Date().toISOString()} [${nodeName}] ${msg}`;
+  const line = new Date().toISOString() + ' [' + nodeName + '] ' + msg;
   console.log('[PIPELINE] ' + line);
-  try {
-    const fs = require('fs');
-    fs.mkdirSync('/data/reports', { recursive: true });
-    fs.appendFileSync('/data/reports/pipeline.log', line + '\n');
-  } catch (e) { /* volume not mounted */ }
   const sd = $getWorkflowStaticData('global');
   sd.pipelineLog = sd.pipelineLog || [];
   sd.pipelineLog.push(line);
@@ -445,13 +440,11 @@ for (const g of gates) {
   let healthy = false;
   let detail = 'not_executed';
   try {
-    if ($(g.node).isExecuted) {
-      const j = $(g.node).first().json;
-      healthy = g.ok(j);
-      detail = healthy ? 'ok' : JSON.stringify(j).slice(0, 300);
-    }
+    const j = $(g.node).first().json;
+    healthy = g.ok(j);
+    detail = healthy ? 'ok' : JSON.stringify(j).slice(0, 300);
   } catch (e) {
-    detail = e.message;
+    detail = 'node_error: ' + e.message;
   }
   if (!healthy) failures.push({ api: g.label, detail });
 }
@@ -491,15 +484,16 @@ staticData.errorLog.push({
   error_message: staticData.productionHaltReason,
   article_url: 'n/a',
 });
+pipelineLog('HALT production stopped: ' + (staticData.productionHaltReason || 'unknown'));
 return [{
   json: {
     halted: true,
     stopServerRecommended: true,
     message: 'One or more API keys failed. Workflow halted to avoid charges. Run: docker compose down',
     failures: item.failures || staticData.lastApiGateFailures,
+    pipelineTrace: (staticData.pipelineLog || []).slice(-25),
   }
 }];
-pipelineLog('HALT production stopped: ' + (staticData.productionHaltReason || 'unknown'));
 """)
 
 MARK_CAPTION_REVIEW_PASSED = r"""const item = $input.first().json;
@@ -1039,11 +1033,6 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = with_pipeline_log(
     rf"""const staticData = $getWorkflowStaticData('global');
 staticData.pipelineLog = [];
-try {{
-  const fs = require('fs');
-  fs.mkdirSync('/data/reports', {{ recursive: true }});
-  fs.writeFileSync('/data/reports/pipeline.log', '');
-}} catch (e) {{}}
 pipelineLog('BUILD={WORKFLOW_BUILD} webhook test-one started');
 staticData.todaySchedule = [{{
   slotIndex: 1,
@@ -1093,23 +1082,38 @@ CATEGORY_PREP = r"""return [{ json: { topicLabel: 'politics+celebrities', catego
 
 MERGE_NEWS_FEEDS = with_pipeline_log(r"""function safeArticles(nodeName) {
   try {
-    if (!$(nodeName).isExecuted) return [];
     const j = $(nodeName).first().json;
-    if (j.error || (j.status && j.status !== 'ok')) return [];
+    if (j.error || (j.status && j.status !== 'ok')) {
+      pipelineLog('NEWS ' + nodeName + ' bad response: ' + JSON.stringify(j).slice(0, 200));
+      return [];
+    }
     return j.articles || [];
   } catch (e) {
+    pipelineLog('NEWS ' + nodeName + ' error: ' + e.message);
     return [];
   }
 }
 const politics = safeArticles('fetchPoliticsNews');
 const celebrities = safeArticles('fetchCelebritiesNews');
-const articles = [
+let articles = [
   ...politics.map(a => ({ ...a, _topic: 'politics' })),
   ...celebrities.map(a => ({ ...a, _topic: 'celebrities' })),
 ];
-pipelineLog(`NEWS politics=${politics.length} celebrities=${celebrities.length} total=${articles.length}`);
 if (articles.length === 0) {
-  throw new Error('MERGE_NEWS_FEEDS: NewsAPI returned 0 articles — check NEWSAPI_KEY, User-Agent, or quota.');
+  try {
+    const gate = $('productionGateNewsAPI').first().json;
+    const fromGate = (gate.articles || []).map(a => ({ ...a, _topic: 'politics' }));
+    if (fromGate.length) {
+      pipelineLog('NEWS using productionGateNewsAPI fallback count=' + fromGate.length);
+      articles = fromGate;
+    }
+  } catch (e) {
+    pipelineLog('NEWS gate fallback failed: ' + e.message);
+  }
+}
+pipelineLog('NEWS politics=' + politics.length + ' celebrities=' + celebrities.length + ' total=' + articles.length);
+if (articles.length === 0) {
+  throw new Error('MERGE_NEWS_FEEDS: 0 articles — check NEWSAPI_KEY, User-Agent header, or quota.');
 }
 return [{ json: { status: 'ok', articles, totalResults: articles.length, _category: 'politics+celebrities' } }];
 """)

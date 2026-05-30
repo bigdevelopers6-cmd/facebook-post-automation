@@ -74,6 +74,53 @@ def parse_execution(root: dict) -> Tuple[dict, Optional[str], Optional[str], dic
     return (run if isinstance(run, dict) else {}), last, status, data
 
 
+def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
+    """Best-effort error messages from n8n execution payload."""
+    import re
+
+    lines: list[str] = []
+    data = root.get("data", root) if isinstance(root, dict) else {}
+    if isinstance(data, dict):
+        err = data.get("error")
+        if err:
+            if isinstance(err, dict):
+                lines.append(f"data.error: {err.get('message', err)}")
+            else:
+                lines.append(f"data.error: {err}")
+
+    if raw_text:
+        for pat in (
+            r'"lastNodeExecuted"\s*:\s*"([^"]+)"',
+            r'"description"\s*:\s*"([^"]{15,400})"',
+            r'"message"\s*:\s*"((?:FILTER|MERGE|GATE|HALT|NewsAPI|Error)[^"]{10,400})"',
+            r'"message"\s*:\s*"([^"]*(?:articles|token|API|halt)[^"]{5,400})"',
+        ):
+            for m in re.finditer(pat, raw_text, re.I):
+                lines.append(m.group(1) if m.lastindex == 1 else m.group(0)[:400])
+
+        trace_block = re.search(r'"pipelineTrace"\s*:\s*\[(.*?)\]', raw_text, re.S)
+        if trace_block:
+            entries = re.findall(r'"([^"]{20,200})"', trace_block.group(1))
+            if entries:
+                lines.append("--- pipelineTrace from execution ---")
+                lines.extend(entries[-15:])
+
+        plog = re.search(r'"pipelineLog"\s*:\s*\[(.*?)\]', raw_text, re.S)
+        if plog:
+            entries = re.findall(r'"([^"]{15,250})"', plog.group(1))
+            if entries:
+                lines.append("--- pipelineLog in staticData ---")
+                lines.extend(entries[-20:])
+
+    seen = set()
+    out: list[str] = []
+    for ln in lines:
+        if ln not in seen:
+            seen.add(ln)
+            out.append(ln)
+    return out[:25]
+
+
 def scan_raw_execution(raw_text: str) -> dict:
     """Mine execution JSON text when runData is missing (n8n 2.x)."""
     import re

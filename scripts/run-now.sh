@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v3}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v4}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -61,9 +61,7 @@ preflight() {
     echo "        Run: bash scripts/server-pull.sh && bash scripts/server-deploy.sh"
     exit 1
   fi
-  mkdir -p data/reports
-  : > data/reports/pipeline.log
-  echo "[OK]  Cleared data/reports/pipeline.log for this run"
+  echo "[OK]  Trace will be in execution JSON (staticData.pipelineLog)"
 }
 
 echo "=============================================="
@@ -111,11 +109,6 @@ while true; do
     fi
     echo ""
     echo "Facebook page: https://www.facebook.com/$FB_PAGE"
-    if [ -s data/reports/pipeline.log ]; then
-      echo "--- pipeline.log (live) ---"
-      tail -8 data/reports/pipeline.log
-      echo "---------------------------"
-    fi
   else
     echo "[..] PENDING      Waiting for execution... (${ELAPSED}s)"
   fi
