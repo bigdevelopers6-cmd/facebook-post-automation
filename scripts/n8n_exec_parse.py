@@ -80,6 +80,27 @@ def runtime_publish_ok(raw_text: str) -> bool:
     return bool(re.search(r"PUBLISH_OK postId=\d{8,}", raw_text))
 
 
+def deep_find_key(obj: Any, key: str, depth: int = 0) -> list[Any]:
+    """Collect all values for a key nested in execution JSON."""
+    if depth > 30:
+        return []
+    found: list[Any] = []
+    if isinstance(obj, dict):
+        if key in obj:
+            found.append(obj[key])
+        for v in obj.values():
+            found.extend(deep_find_key(v, key, depth + 1))
+    elif isinstance(obj, list):
+        for item in obj[:100]:
+            found.extend(deep_find_key(item, key, depth + 1))
+    elif isinstance(obj, str) and len(obj) > 80:
+        try:
+            found.extend(deep_find_key(json.loads(obj), key, depth + 1))
+        except json.JSONDecodeError:
+            pass
+    return found
+
+
 def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
     """Best-effort error messages from n8n execution payload."""
     import re
@@ -99,7 +120,18 @@ def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
             else:
                 lines.append(f"data.error: {err}")
 
+    for msg in deep_find_key(root, "message"):
+        text = str(msg)
+        if "WEBHOOK_TEST_NO_POST" in text and text not in lines:
+            lines.append(f"nested error.message: {text[:1500]}")
+
     if raw_text:
+        wh = re.search(
+            r'WEBHOOK_TEST_NO_POST[^"\\]{0,1200}',
+            raw_text.replace("\\n", " ").replace('\\"', '"'),
+        )
+        if wh:
+            lines.append("raw: " + wh.group(0)[:1200])
         for pat in (
             r'"lastNodeExecuted"\s*:\s*"([^"]+)"',
             r'"__fatalCodeError"\s*:\s*true',

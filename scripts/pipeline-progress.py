@@ -52,6 +52,23 @@ SKIP_NODES = {
     "logBlockedPublish", "prepareHaltEmail", "emailProductionHalted",
 }
 
+# Runtime trace tokens when n8n 2.x returns empty runData
+RAW_TRACE_MARKERS = [
+    ("prepareCategory: start fetch", "news", "done"),
+    ("mergeNewsFeeds:", "news", "done"),
+    ("filterArticles:", "news", "done"),
+    ("logMergeStats: items=", "news", "done"),
+    ("prepareSlotWait: forcePostTest", "slot", "done"),
+    ("parseFBToken: valid=false", "token", "failed"),
+    ("SKIP_TOKEN_INVALID", "token", "skipped"),
+    ("SKIP_HALTED", "slot", "skipped"),
+    ("BLOCKED_PUBLISH", "image", "skipped"),
+    ("webhookEnsurePublish:", "image", "done"),
+    ("PUBLISH_OK postId=", "publish", "done"),
+    ("WEBHOOK_TEST_NO_POST", "finish", "failed"),
+    ("assertWebhookPost", "finish", "failed"),
+]
+
 
 
 def extract_run_data(root):
@@ -160,11 +177,73 @@ def render_progress(run, last_node, exec_status, elapsed_s=None):
     return "\n".join(lines)
 
 
+def infer_from_raw(raw: str, exec_status: str | None) -> dict[str, tuple[str, str | None]]:
+    """Step key -> (state, detail) from pipelineLog strings in execution blob."""
+    import re
+
+    states: dict[str, tuple[str, str | None]] = {}
+    runtime = []
+    for m in re.finditer(
+        r'(?:BUILD=|prepareCategory|mergeNewsFeeds|filterArticles|logMergeStats|prepareSlotWait|parseFBToken|SKIP_|BLOCKED_|webhookEnsure|PUBLISH_OK|WEBHOOK_TEST)[^"\\]{8,120}',
+        raw,
+    ):
+        t = m.group(0).replace("\\n", " ")
+        if "const __sd" in t or "return [{ json" in t:
+            continue
+        runtime.append(t)
+    blob = " | ".join(runtime)
+    if not blob:
+        return states
+
+    order = ["trigger", "gate", "news", "slot", "token", "caption", "review", "image", "publish", "finish"]
+    for marker, step_key, default_state in RAW_TRACE_MARKERS:
+        if marker in blob:
+            states[step_key] = (default_state, marker[:60])
+
+    if exec_status == "error" and "WEBHOOK_TEST_NO_POST" in blob:
+        states["finish"] = ("failed", "WEBHOOK_TEST_NO_POST")
+    if "PUBLISH_OK postId=" in blob and re.search(r"PUBLISH_OK postId=\d{6,}", blob):
+        states["publish"] = ("done", "PUBLISH_OK")
+
+    # Mark pending steps after last known
+    if states:
+        last_idx = max(order.index(k) for k in states if k in order)
+        for k in order[last_idx + 1 :]:
+            if k not in states:
+                states[k] = ("pending", None)
+    return states
+
+
+def render_progress_with_raw(run, last_node, exec_status, elapsed_s=None, raw: str = ""):
+    if run:
+        return render_progress(run, last_node, exec_status, elapsed_s)
+    inferred = infer_from_raw(raw, exec_status)
+    if not inferred:
+        return render_progress(run, last_node, exec_status, elapsed_s)
+
+    icons = {"done": "[OK] ", "processing": "[>>] ", "pending": "[..] ", "failed": "[!!] ", "skipped": "[--] "}
+    lines = ["=== Pipeline progress (inferred from trace — n8n runData empty) ===", ""]
+    if elapsed_s is not None:
+        lines[0] += f"  ({elapsed_s:.0f}s, {exec_status or 'unknown'})"
+    for key, label, _nodes in PIPELINE:
+        state, detail = inferred.get(key, ("pending", None))
+        icon = icons.get(state, "[??] ")
+        suffix = f"  ({detail})" if detail else ""
+        word = state.upper() if state != "done" else "DONE"
+        lines.append(f"{icon}{label:<42} {word}{suffix}")
+    lines.append("")
+    lines.append("Nodes executed: 0 (use trace line above — not n8n runData)")
+    return "\n".join(lines)
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] not in ("-", "--stdin"):
-        root = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        path = Path(sys.argv[1])
+        root = json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_text(encoding="utf-8")
     else:
-        root = json.loads(sys.stdin.read())
+        raw = sys.stdin.read()
+        root = json.loads(raw)
 
     run, last, exec_status, _ = extract_run_data(root)
     elapsed = None
@@ -173,7 +252,7 @@ def main():
             elapsed = float(sys.argv[2])
         except ValueError:
             pass
-    print(render_progress(run, last, exec_status, elapsed))
+    print(render_progress_with_raw(run, last, exec_status, elapsed, raw))
 
 
 if __name__ == "__main__":

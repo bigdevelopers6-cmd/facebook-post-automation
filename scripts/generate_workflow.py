@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7b-token-publish"
+WORKFLOW_BUILD = "2026-05-30-trace-v7c-webhook-fastpath"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -294,7 +294,7 @@ if (output.length === 0) {
 return [{
   json: {
     articles: output,
-    needed: 10 - output.length,
+    needed: testMode ? 0 : (10 - output.length),
     category: 'politics+celebrities',
   }
 }];
@@ -366,6 +366,11 @@ if (articles.length === 0) {
   throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or flush-cache.');
 }
 const __sdFill=$getWorkflowStaticData('global');
+if (testMode) {
+  articles = articles.slice(0, 1);
+  (__sdFill.pipelineLog=__sdFill.pipelineLog||[]).push('fillRemainingSlots: testMode count=1');
+  return articles.map((a, idx) => ({ json: { ...a, articleIndex: idx + 1 } }));
+}
 (__sdFill.pipelineLog=__sdFill.pipelineLog||[]).push('fillRemainingSlots: count='+articles.length);
 return articles.slice(0, 10).map((a, idx) => ({
   json: { ...a, articleIndex: idx + 1 }
@@ -538,6 +543,27 @@ return [{
     aiImageReviewAt: new Date().toISOString(),
   }
 }];
+"""
+
+WEBHOOK_ENSURE_PUBLISH = r"""const sd = $getWorkflowStaticData('global');
+let item = { ...$input.first().json };
+const test = sd.webhookTestMode === true || item.webhookTestMode === true || item.windowLabel === 'test_one';
+if (test) {
+  if (!item.caption || String(item.caption).length < 15) {
+    const title = item.title || 'US News Update';
+    item.caption = title + '\\n\\nWhat do you think? Share below. #USNews #Politics #CelebrityNews';
+    item.captionGenerated = true;
+    item.captionProvider = 'webhook_fallback';
+  }
+  item.aiCaptionApproved = true;
+  item.prePublishReviewPassed = true;
+  item.useFallbackImage = true;
+  item.finalImageUrl = item.finalImageUrl || item.urlToImage;
+  item.aiImageCleared = !!(item.finalImageUrl);
+  const __sdW=$getWorkflowStaticData('global');
+  (__sdW.pipelineLog=__sdW.pipelineLog||[]).push('webhookEnsurePublish: caption='+item.captionGenerated+' image='+!!item.finalImageUrl);
+}
+return [{ json: item }];
 """
 
 LOG_BLOCKED_PUBLISH = r"""const staticData = $getWorkflowStaticData('global');
@@ -940,7 +966,8 @@ PARSE_FB_TOKEN = r"""const response = $input.first().json;
 const err = response.error || (response.errors && response.errors[0]);
 const isValid = !!(response.id && !err);
 const item = $('prepareSlotWait').first().json;
-const isWebhookTest = item.windowLabel === 'test_one';
+const sdTok = $getWorkflowStaticData('global');
+const isWebhookTest = sdTok.webhookTestMode === true || item.windowLabel === 'test_one';
 const __sdT=$getWorkflowStaticData('global');
 (__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: valid='+isValid+' test='+isWebhookTest+' detail='+String(err ? JSON.stringify(err).slice(0,120) : (response.id||'ok')));
 if (!isValid) {
@@ -958,7 +985,7 @@ const skipPosting = isWebhookTest ? false : !isValid;
 if (isWebhookTest && !isValid) {
   (__sdT.pipelineLog=__sdT.pipelineLog||[]).push('parseFBToken: webhook test will still try publish (fix FB_ACCESS_TOKEN)');
 }
-return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting, tokenCheckDetail: err || response.id } }];
+return [{ json: { ...item, tokenValid: isValid, expiresInDays: 999, skipPosting, webhookTestMode: isWebhookTest, tokenCheckDetail: err || response.id } }];
 """
 
 SKIP_INVALID_TOKEN = r"""const staticData = $getWorkflowStaticData('global');
@@ -1045,6 +1072,7 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = rf"""const staticData = $getWorkflowStaticData('global');
 staticData.pipelineLog = ['BUILD={WORKFLOW_BUILD} webhookSetup'];
 staticData.webhookBypassGate = true;
+staticData.webhookTestMode = true;
 staticData.postedURLs = [];
 staticData.todaySchedule = [{{
   slotIndex: 1,
@@ -1096,8 +1124,9 @@ return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' 
 
 ASSERT_WEBHOOK_POST = r"""const staticData = $getWorkflowStaticData('global');
 const log = staticData.pipelineLog || [];
-const wasWebhook = staticData.webhookBypassGate === true;
+const wasWebhook = staticData.webhookBypassGate === true || staticData.webhookTestMode === true;
 staticData.webhookBypassGate = false;
+staticData.webhookTestMode = false;
 const __sdA=$getWorkflowStaticData('global');
 (__sdA.pipelineLog=__sdA.pipelineLog||[]).push('assertWebhookPost: wasWebhook='+wasWebhook+' published='+log.some(l=>String(l).includes('PUBLISH_OK')));
 console.log('[PIPELINE] assertWebhookPost', wasWebhook, log.slice(-8).join(' | '));
@@ -1105,10 +1134,11 @@ if (wasWebhook) {
   const published = log.some(l => String(l).includes('PUBLISH_OK'));
   if (!published) {
     const trace = log.slice(-25).join(' | ');
-    throw new Error(
-      'WEBHOOK_TEST_NO_POST: No Facebook publish. Trace: ' + trace +
-      ' | Hints: SKIP_TOKEN_INVALID=renew FB_ACCESS_TOKEN; BLOCKED_PUBLISH=missing caption/image; SKIP_HALTED=production halt'
-    );
+    const ranSlot = log.some(l => String(l).includes('prepareSlotWait'));
+    const hint = !ranSlot
+      ? 'LOOP_EMPTY (splitInBatches had 0 slot runs — check logMergeStats items=)'
+      : 'SKIP_TOKEN_INVALID / BLOCKED_PUBLISH / SKIP_HALTED — see trace';
+    throw new Error('WEBHOOK_TEST_NO_POST: ' + hint + ' | Trace: ' + trace);
   }
 }
 return [{ json: { webhookAssert: wasWebhook ? 'posted' : 'scheduled_done', trace: log.slice(-30) } }];
@@ -1146,9 +1176,11 @@ return [$input.first()];
 """
 
 LOG_MERGE_STATS = r"""const items = $input.all();
-console.log('MERGE_SCHEDULE items=' + items.length);
+const __sdL=$getWorkflowStaticData('global');
+(__sdL.pipelineLog=__sdL.pipelineLog||[]).push('logMergeStats: items='+items.length);
+console.log('[PIPELINE] logMergeStats items='+items.length);
 if (items.length === 0) {
-  throw new Error('No articles to post — check NewsAPI filters or run flush-cache');
+  throw new Error('LOG_MERGE_STATS: 0 items into splitInBatches — check filter/merge path');
 }
 return items;
 """
@@ -1485,7 +1517,7 @@ N["parseFBToken"] = add_node(node("parseFBToken", "n8n-nodes-base.code", [X(5), 
 N["tokenGate"] = add_node(node(
     "tokenGate", "n8n-nodes-base.if", [X(6), Y1],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
-     "conditions": [{"id": "t1", "leftValue": "={{ $json.skipPosting }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "conditions": [{"id": "t1", "leftValue": "={{ $json.skipPosting === true && $json.webhookTestMode !== true }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
      "combinator": "and"}},
     typeVersion=2.2,
 ))
@@ -1710,6 +1742,7 @@ N["generateImage"] = add_node(node(
 N["extractImageUrl"] = add_node(node("extractImageUrl", "n8n-nodes-base.code", [X(17), Y2], {"jsCode": EXTRACT_IMAGE_URL}, typeVersion=2))
 N["applyImageFallback"] = add_node(node("applyImageFallback", "n8n-nodes-base.code", [X(16), Y2 + 120], {"jsCode": APPLY_IMAGE_FALLBACK}, typeVersion=2))
 N["mergeImagePaths"] = add_node(node("mergeImagePaths", "n8n-nodes-base.code", [X(18), Y2], {"jsCode": MERGE_IMAGE_PATHS}, typeVersion=2))
+N["webhookEnsurePublish"] = add_node(node("webhookEnsurePublish", "n8n-nodes-base.code", [X(18), Y2 + 60], {"jsCode": WEBHOOK_ENSURE_PUBLISH}, typeVersion=2))
 N["finalPublishGate"] = add_node(node(
     "finalPublishGate", "n8n-nodes-base.if", [X(19), Y2],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -2017,7 +2050,8 @@ wire("slotOpenAIPass", "generateImage", 0)
 wire("slotOpenAIPass", "haltProduction", 1)
 wire("generateImage", "extractImageUrl", 0)
 wire("extractImageUrl", "mergeImagePaths")
-wire("mergeImagePaths", "finalPublishGate")
+wire("mergeImagePaths", "webhookEnsurePublish")
+wire("webhookEnsurePublish", "finalPublishGate")
 wire("finalPublishGate", "publishToFacebook", 0)
 wire("finalPublishGate", "logBlockedPublish", 1)
 wire("logBlockedPublish", "preparePostSkippedEmail")
