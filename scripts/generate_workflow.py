@@ -55,7 +55,7 @@ CAPTION_SYSTEM = (
     "Your audience is US adults 25–45 who follow elections, Capitol Hill, White House news, Hollywood, music, and pop culture. "
     "Write exclusively in American English. Never mention AI, automation, or that this post was generated. Each caption must: "
     "(1) open with a strong hook tied to US political or celebrity culture, "
-    "(2) summarize the story in 1–2 plain conversational sentences, "
+    "(2) summarize the story in about 95–105 words total (full caption length), "
     "(3) end with a thought-provoking question inviting Americans to comment, "
     "(4) include exactly 3 hashtags relevant to politics OR celebrities (e.g. #Election2026 #CapitolHill #Hollywood #CelebrityNews), "
     "(5) include exactly 1–2 emojis placed naturally in the caption (not more than two; match the story mood). "
@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v10-feed-publish"
+WORKFLOW_BUILD = "2026-05-30-trace-v11-dedupe-caption"
 
 # Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
 TRACE_FN = r"""
