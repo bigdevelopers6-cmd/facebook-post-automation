@@ -670,6 +670,9 @@ for (let i = 0; i < 10; i++) {
 }
 staticData.todaySchedule = schedule;
 staticData.circuitBreakerHalted = false;
+staticData.productionHalted = false;
+staticData.apisHealthy = null;
+staticData.lastApiGateFailures = [];
 return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 """
 
@@ -681,6 +684,9 @@ staticData.todaySchedule = [{
   scheduledEt: 'now',
 }];
 staticData.circuitBreakerHalted = false;
+staticData.productionHalted = false;
+staticData.apisHealthy = null;
+staticData.lastApiGateFailures = [];
 return [{ json: { command: 'test-one', mode: 'single_slot' } }];
 """
 
