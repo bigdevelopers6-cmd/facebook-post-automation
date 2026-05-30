@@ -13,14 +13,18 @@ fi
 PAGE="${FB_PAGE_ID:-1191676374021102}"
 TOKEN="${FB_ACCESS_TOKEN:-}"
 API_VER="${FB_API_VERSION:-v19.0}"
+CURL_OPTS=(--max-time 45 --connect-timeout 15 -sS)
 
 if [ -z "$TOKEN" ]; then
   echo "[!!] Set FB_ACCESS_TOKEN in .env first (can be a short-lived user token)"
   exit 1
 fi
 
-echo "Fetching Page tokens for user token ${TOKEN:0:12}..."
-RESP=$(curl -s "https://graph.facebook.com/${API_VER}/me/accounts?fields=id,name,access_token,tasks&access_token=${TOKEN}")
+echo "Fetching Page tokens (me/accounts) for ${TOKEN:0:12}..."
+RESP=$(curl "${CURL_OPTS[@]}" "https://graph.facebook.com/${API_VER}/me/accounts?fields=id,name,access_token,tasks&access_token=${TOKEN}") || {
+  echo "[!!] curl failed — check network / DNS to graph.facebook.com"
+  exit 1
+}
 
 python3 -c "
 import sys, json
@@ -44,4 +48,4 @@ if not found:
 print('')
 print('Put this in .env (PAGE token, not user token):')
 print('FB_ACCESS_TOKEN=' + found)
-"
+" <<< "$RESP"
