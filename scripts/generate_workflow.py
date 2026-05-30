@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v11-dedupe-caption"
+WORKFLOW_BUILD = "2026-05-30-trace-v12-posted-cache-file"
 
 # Shared trace helpers (file + staticData — survives empty runData in n8n 2.x API)
 TRACE_FN = r"""
@@ -125,6 +125,102 @@ function __isWebhookRun(sd) {
     if (j && (j.command === 'test-one' || j.mode === 'single_slot')) return true;
   } catch (e) {}
   return false;
+}
+"""
+
+POSTED_CACHE_FN = r"""
+const POSTED_CACHE_FILE = '/data/reports/posted-urls.json';
+function normalizeArticleUrl(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    ['utm_source','utm_medium','utm_campaign','fbclid','ref'].forEach(k => u.searchParams.delete(k));
+    return (u.origin + u.pathname).replace(/\/$/, '');
+  } catch (e) { return String(url).trim(); }
+}
+function loadPostedCache() {
+  const sd = $getWorkflowStaticData('global');
+  let fileUrls = [];
+  try {
+    const parsed = JSON.parse(require('fs').readFileSync(POSTED_CACHE_FILE, 'utf8'));
+    fileUrls = parsed.urls || [];
+  } catch (e) {}
+  sd.postedURLs = [...new Set([...(sd.postedURLs || []), ...fileUrls].map(normalizeArticleUrl).filter(Boolean))];
+  return sd.postedURLs;
+}
+function savePostedCache(urls) {
+  try {
+    const clean = [...new Set(urls.map(normalizeArticleUrl).filter(Boolean))].slice(-200);
+    require('fs').writeFileSync(POSTED_CACHE_FILE, JSON.stringify({ urls: clean, updatedAt: new Date().toISOString() }));
+    return clean;
+  } catch (e) { return urls; }
+}
+function isUrlPosted(url) {
+  const norm = normalizeArticleUrl(url);
+  const list = loadPostedCache();
+  return list.includes(norm);
+}
+function markUrlPosted(url) {
+  const sd = $getWorkflowStaticData('global');
+  const norm = normalizeArticleUrl(url);
+  if (!norm) return;
+  loadPostedCache();
+  if (!sd.postedURLs.includes(norm)) sd.postedURLs.push(norm);
+  sd.postedURLs = savePostedCache(sd.postedURLs);
+}
+"""
+
+CAPTION_UTILS = r"""
+function sanitizeCaption(text) {
+  if (text == null) return '';
+  let s = String(text);
+  s = s.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+  s = s.replace(/\|p\|/gi, '\n\n').replace(/\/n\/n/g, '\n').replace(/\/n/g, '\n');
+  s = s.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+  s = s.replace(/\s+\n/g, '\n').replace(/\n\s+/g, '\n');
+  return s.trim();
+}
+function cleanTitle(title, sourceName) {
+  let t = sanitizeCaption(title);
+  const src = sanitizeCaption(sourceName || '');
+  for (const sep of [' - ', ' — ', ' | ']) {
+    if (src && t.endsWith(sep + src)) t = t.slice(0, -(sep + src).length);
+  }
+  return t.trim();
+}
+function countWords(text) {
+  return sanitizeCaption(text).split(/\s+/).filter(Boolean).length;
+}
+function trimToWordCount(text, target) {
+  const words = sanitizeCaption(text).split(/\s+/).filter(Boolean);
+  if (words.length <= target) return words.join(' ');
+  return words.slice(0, target).join(' ') + '…';
+}
+function buildCaptionAbout100(title, description, sourceName) {
+  const hook = cleanTitle(title, sourceName);
+  const desc = sanitizeCaption(description || '').replace(/\s+/g, ' ');
+  let words = desc.split(/\s+/).filter(Boolean);
+  let body;
+  if (words.length >= 75) {
+    body = words.slice(0, 88).join(' ');
+  } else if (words.length >= 25) {
+    body = words.join(' ');
+    body = (body + ' ' + hook).split(/\s+/).filter(Boolean).slice(0, 88).join(' ');
+  } else {
+    body = (hook + '. This developing US politics and celebrity story is gaining attention nationwide. '
+      + 'Readers are debating what happens next and who is most affected. '
+      + 'Share your perspective below.').split(/\s+/).filter(Boolean).slice(0, 88).join(' ');
+  }
+  const tags = '#USNews #Politics #CelebrityNews';
+  let caption = hook + '\n\n' + body;
+  if (sourceName) caption += '\n\nSource: ' + sanitizeCaption(sourceName);
+  if (countWords(caption) < 90) {
+    caption += '\n\nWhat do you think — fair take or missing context? Drop a comment 👇';
+  }
+  if (!caption.includes('#')) caption += '\n\n' + tags;
+  if (countWords(caption) > 115) caption = trimToWordCount(caption, 100) + '\n\n' + tags;
+  return sanitizeCaption(caption);
 }
 """
 
@@ -233,9 +329,9 @@ staticData.todaySchedule = schedule;
 return [{ json: { stored: true, slotCount: schedule.length } }];
 """
 
-FILTER_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
+FILTER_ARTICLES = POSTED_CACHE_FN + r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
-const postedURLs = staticData.postedURLs || [];
+const postedURLs = loadPostedCache();
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
 const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'bbc.com', 'people.com', 'variety.com', 'hollywoodreporter.com', 'politico.com', 'thehill.com'];
@@ -276,7 +372,7 @@ function priorityScore(article) {
 
 const primary = $input.first().json.articles || [];
 let filtered = primary.filter(isValid)
-  .filter(a => !postedURLs.includes(a.url))
+  .filter(a => !isUrlPosted(a.url))
   .filter(a => testMode || topicScore(a) > 0)
   .sort((a, b) => (priorityScore(b) - priorityScore(a)) || (topicScore(b) - topicScore(a)));
 
@@ -292,11 +388,14 @@ for (const a of filtered) {
 mixed = mixed.slice(0, 10);
 
 if (mixed.length === 0) {
-  const pool = primary.filter(isValid).filter(a => !postedURLs.includes(a.url));
+  const pool = primary.filter(isValid).filter(a => !isUrlPosted(a.url));
+  if (pool.length === 0) {
+    throw new Error('FILTER_ARTICLES: No new articles — all recent URLs already posted (' + postedURLs.length + ' in cache). Wait for fresh news or run flush-cache.');
+  }
   const relaxed = testMode
-    ? pool.slice(0, 3)
+    ? pool.slice(0, 5)
     : pool.filter(a => topicScore(a) > 0).slice(0, 10);
-  mixed = relaxed.length ? relaxed : pool.slice(0, testMode ? 1 : 5);
+  mixed = relaxed.length ? relaxed.slice(0, testMode ? 1 : 10) : pool.slice(0, testMode ? 1 : 5);
 }
 
 const output = mixed.map(a => ({
@@ -309,7 +408,9 @@ const output = mixed.map(a => ({
 }));
 
 const __sdF=$getWorkflowStaticData('global');
-(__sdF.pipelineLog=__sdF.pipelineLog||[]).push('filterArticles: primary='+primary.length+' output='+output.length);
+const skippedPosted = primary.filter(a => isUrlPosted(a.url)).length;
+output.forEach(a => { if (a.url) markUrlPosted(a.url); });
+(__sdF.pipelineLog=__sdF.pipelineLog||[]).push('filterArticles: primary='+primary.length+' output='+output.length+' postedCache='+postedURLs.length+' skippedPosted='+skippedPosted+' picked='+String((output[0]||{}).url||'').slice(0,55));
 console.log('[PIPELINE] filterArticles', primary.length, output.length);
 if (output.length === 0) {
   throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);
@@ -324,9 +425,9 @@ return [{
 }];
 """
 
-FILL_REMAINING_SLOTS = r"""const staticData = $getWorkflowStaticData('global');
+FILL_REMAINING_SLOTS = POSTED_CACHE_FN + r"""const staticData = $getWorkflowStaticData('global');
 const testMode = staticData.singleSlotTest === true;
-const postedURLs = staticData.postedURLs || [];
+const postedURLs = loadPostedCache();
 const NOISE = ['msn.com', 'yahoo.com', 'buzzfeed.com'];
 const PRIORITY = ['nytimes.com', 'washingtonpost.com', 'cnn.com', 'reuters.com', 'apnews.com', 'forbes.com', 'techcrunch.com', 'bbc.com', 'wsj.com'];
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
@@ -354,7 +455,7 @@ if (needed > 0) {
   const fallback = $input.first().json.articles || [];
   const existing = new Set(articles.map(a => a.url));
   const extra = fallback.filter(isValid)
-    .filter(a => !postedURLs.includes(a.url))
+    .filter(a => !isUrlPosted(a.url))
     .filter(a => !existing.has(a.url))
     .sort((a, b) => priorityScore(b) - priorityScore(a));
 
@@ -576,16 +677,14 @@ return [{
 }];
 """
 
-WEBHOOK_ENSURE_PUBLISH = TRACE_FN + r"""const sd = $getWorkflowStaticData('global');
+WEBHOOK_ENSURE_PUBLISH = TRACE_FN + CAPTION_UTILS + r"""const sd = $getWorkflowStaticData('global');
 let item = { ...$input.first().json };
 const test = sd.webhookTestMode === true || item.webhookTestMode === true || item.windowLabel === 'test_one';
 if (test) {
-  if (!item.caption || String(item.caption).length < 15) {
-    const title = item.title || 'US News Update';
-    item.caption = title + '\\n\\nWhat do you think? Share below. #USNews #Politics #CelebrityNews';
-    item.captionGenerated = true;
-    item.captionProvider = 'webhook_fallback';
-  }
+  item.caption = buildCaptionAbout100(item.title, item.description, item.source?.name);
+  item.caption = sanitizeCaption(item.caption);
+  item.captionGenerated = countWords(item.caption) >= 40;
+  item.captionProvider = item.captionProvider || 'webhook_100w';
   item.aiCaptionApproved = true;
   item.prePublishReviewPassed = true;
   item.useFallbackImage = true;
@@ -713,11 +812,12 @@ function parseReviewJson(raw) {
 }
 """
 
-EXTRACT_CAPTION_FROM_API = r"""const j = $input.first().json;
+EXTRACT_CAPTION_FROM_API = CAPTION_UTILS + r"""const j = $input.first().json;
 const item = $('prepareSlotWait').first().json;
-const text = (j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+let text = sanitizeCaption((j.content?.[0]?.text || j.choices?.[0]?.message?.content || j.candidates?.[0]?.content?.parts?.[0]?.text || ''));
+if (countWords(text) > 115) text = trimToWordCount(text, 100);
 const provider = j.content ? 'anthropic' : (j.choices ? 'groq' : (j.candidates ? 'gemini' : 'unknown'));
-return [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: text.length > 20, rewriteAttempt: 0 } }];
+return [{ json: { ...item, caption: text, captionProvider: provider, captionGenerated: countWords(text) >= 40, rewriteAttempt: 0 } }];
 """
 
 PRE_PUBLISH_AUTO = r"""const item = $input.first().json;
@@ -753,7 +853,7 @@ GENERATE_CAPTION_WITH_FALLBACK = (
     + f"""
 const CAPTION_SYSTEM = {json.dumps(CAPTION_SYSTEM)};
 const item = $input.first().json;
-const userPrompt = 'Write a Facebook caption for this US politics/celebrity story:\\nTopic: '
+const userPrompt = 'Write a Facebook caption of 95-105 words for this US politics/celebrity story. Use real line breaks, never literal backslash-n.\\nTopic: '
   + (item._topic || 'news') + '\\nTitle: ' + item.title + '\\nDescription: ' + item.description
   + '\\nSource: ' + (item.source?.name || 'Unknown');
 
@@ -929,10 +1029,12 @@ return [{ json: { ...item, useFallbackImage: false, finalImageUrl: aiUrl, imageS
 """
 
 
-HANDLE_PUBLISH_SUCCESS = TRACE_FN + r"""const response = $input.first().json;
-const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json;
+HANDLE_PUBLISH_SUCCESS = TRACE_FN + POSTED_CACHE_FN + r"""const response = $input.first().json;
+const item = $('mergeImagePaths').first()?.json || $('applyImageFallback').first()?.json || $('extractImageUrl').first()?.json || $('webhookPreparePublish').first()?.json;
 const postId = response.id || response.post_id || '';
-__trace('PUBLISH_OK postId='+postId);
+if (item.url) markUrlPosted(item.url);
+const staticData = $getWorkflowStaticData('global');
+__trace('PUBLISH_OK postId='+postId+' cachedUrl='+String(item.url||'').slice(0,60)+' cacheSize='+(staticData.postedURLs||[]).length);
 return [{ json: { ...item, post_id: postId, publishSuccess: true, publishTimestamp: new Date().toISOString() } }];
 """
 
@@ -1092,13 +1194,11 @@ if (__isWebhookRun(sd)) {
 return $input.all();
 """
 
-WEBHOOK_PREPARE_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + r"""const sd = $getWorkflowStaticData('global');
+WEBHOOK_PREPARE_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + CAPTION_UTILS + r"""const sd = $getWorkflowStaticData('global');
 if (!__isWebhookRun(sd)) return [];
 const item = $input.first().json;
-const title = item.title || 'US News Update';
-const caption = (item.caption && String(item.caption).length > 15)
-  ? item.caption
-  : title + '\\n\\nWhat do you think? Share below. #USNews #Politics #CelebrityNews';
+const caption = buildCaptionAbout100(item.title, item.description, item.source?.name);
+const wc = countWords(caption);
 const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
 let img = item.finalImageUrl || item.urlToImage || '';
 function isDirectImageUrl(u) {
@@ -1113,7 +1213,7 @@ function isDirectImageUrl(u) {
   return false;
 }
 if (!isDirectImageUrl(img)) img = PLACEHOLDER_IMAGE;
-__trace('webhookPreparePublish: tokenValid='+item.tokenValid+' useFeedLink=true img='+String(img).slice(0,70));
+__trace('webhookPreparePublish: words='+wc+' tokenValid='+item.tokenValid+' url='+String(item.url||'').slice(0,50));
 return [{ json: {
   ...item,
   halted: false,
@@ -1133,7 +1233,7 @@ return [{ json: {
 }}];
 """
 
-PREPARE_FACEBOOK_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + r"""const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
+PREPARE_FACEBOOK_PUBLISH = TRACE_FN + IS_WEBHOOK_FN + CAPTION_UTILS + r"""const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200';
 function isDirectImageUrl(u) {
   if (!u || typeof u !== 'string') return false;
   try {
@@ -1148,6 +1248,7 @@ function isDirectImageUrl(u) {
 const sd = $getWorkflowStaticData('global');
 const item = $input.first().json;
 const webhook = __isWebhookRun(sd) || item.webhookTestMode === true;
+item.caption = sanitizeCaption(item.caption || buildCaptionAbout100(item.title, item.description, item.source?.name));
 let finalImageUrl = item.finalImageUrl || item.urlToImage || '';
 if (!isDirectImageUrl(finalImageUrl)) {
   __trace('prepareFacebookPublish: non-direct image, placeholder was='+String(finalImageUrl).slice(0,70));
@@ -1237,7 +1338,7 @@ try {{ require('fs').writeFileSync('/data/reports/pipeline.log', ''); }} catch(e
 staticData.pipelineLog = ['BUILD={WORKFLOW_BUILD} webhookSetup'];
 staticData.webhookBypassGate = true;
 staticData.webhookTestMode = true;
-staticData.postedURLs = [];
+staticData.postedURLs = staticData.postedURLs || [];
 staticData.todaySchedule = [{{
   slotIndex: 1,
   epochMs: Date.now() + 1000,
@@ -1263,8 +1364,9 @@ return [{ json: { command: 'review-log', auditLog: log } }];
 AUTO_CHECK_TOKEN = r"""return [{ json: { command: 'check-token', runTokenCheck: true } }];
 """
 
-AUTO_FLUSH_CACHE = r"""const staticData = $getWorkflowStaticData('global');
+AUTO_FLUSH_CACHE = POSTED_CACHE_FN + r"""const staticData = $getWorkflowStaticData('global');
 staticData.postedURLs = [];
+try { require('fs').writeFileSync(POSTED_CACHE_FILE, JSON.stringify({ urls: [], updatedAt: new Date().toISOString() })); } catch (e) {}
 return [{ json: { command: 'flush-cache', flushed: true } }];
 """
 
@@ -2036,8 +2138,9 @@ N["slotOpenAIPass"] = add_node(node(
 
 # === PUBLISHER ===
 N["logPrePublish"] = add_node(node("logPrePublish", "n8n-nodes-base.code", [X(0), Y4 - 60], {
-    "jsCode": TRACE_FN + r"""const j = $input.first().json;
-__trace('logPrePublish: page='+($env.FB_PAGE_ID||'')+' mode='+(j.useFeedLink?'feed':'photo')+' captionLen='+String(j.caption||'').length);
+    "jsCode": TRACE_FN + CAPTION_UTILS + r"""const j = $input.first().json;
+j.caption = sanitizeCaption(j.caption || buildCaptionAbout100(j.title, j.description, j.source?.name));
+__trace('logPrePublish: page='+($env.FB_PAGE_ID||'')+' mode='+(j.useFeedLink?'feed':'photo')+' words='+countWords(j.caption));
 return [{ json: j }];"""
 }, typeVersion=2))
 N["prepareFacebookPublish"] = add_node(node("prepareFacebookPublish", "n8n-nodes-base.code", [X(0), Y4 - 30], {"jsCode": PREPARE_FACEBOOK_PUBLISH}, typeVersion=2))
