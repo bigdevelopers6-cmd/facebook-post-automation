@@ -27,36 +27,41 @@ curl -s -b /tmp/n8n-cookies.txt \
   "http://localhost:5678/rest/executions/${EXEC_ID}?includeData=true" -o /tmp/exec.json
 
 python3 << 'PY'
-import json, re
+import json, sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path("scripts").resolve()))
+from n8n_exec_parse import extract_execution_error, parse_execution, scan_raw_execution
 
 root = json.load(open("/tmp/exec.json"))
 raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
-print("Top-level keys:", list(root.keys()))
 data = root.get("data", {})
+print("Top-level keys:", list(root.keys()))
 print("data.status:", data.get("status"))
 print("data.stoppedAt:", data.get("stoppedAt"))
 if data.get("error"):
     print("data.error:", json.dumps(data["error"], indent=2)[:2000])
 
-for pat in [
-    r'"message"\s*:\s*"([^"]{20,500})"',
-    r'"description"\s*:\s*"([^"]{20,500})"',
-    r'"stack"\s*:\s*"([^"]{20,800})"',
-    r'"lastNodeExecuted"\s*:\s*"([^"]+)"',
-    r'"node"\s*:\s*"([^"]+)"[^}]{0,200}"error"',
-]:
-    hits = re.findall(pat, raw)
-    if hits:
-        print(f"\nPattern {pat[:40]}... ({len(hits)} hits):")
-        for h in hits[:6]:
-            text = h if isinstance(h, str) else h[0]
-            print(" ", text[:300].replace("\\n", " "))
+run, last, status, _ = parse_execution(root)
+print("runData nodes:", len(run), "| lastNode:", last)
 
-if "pipelineLog" in raw:
-    logs = re.findall(r'"([^"]*prepareCategory[^"]*)"', raw)
-    if logs:
-        print("\npipelineLog snippets:", logs[:10])
+errs = extract_execution_error(root, raw)
+if errs:
+    print("\n--- Parsed errors / trace ---")
+    for e in errs:
+        print(" ", e[:500])
+else:
+    print("\n(no structured errors — check docker [PIPELINE] logs)")
+
+hints = scan_raw_execution(raw)
+if hints.get("pipeline_lines"):
+    print("\n[PIPELINE] in execution blob:")
+    for ln in hints["pipeline_lines"][-12:]:
+        print(" ", ln[:200])
+if "WEBHOOK_TEST_NO_POST" in raw:
+    print("\n[!!] WEBHOOK_TEST_NO_POST — loop finished without Facebook publish")
+if "PUBLISH_OK" in raw:
+    print("\n[OK] PUBLISH_OK found in execution data")
 PY
 
 echo ""
@@ -71,5 +76,5 @@ docker exec facebook-news-n8n sh -c '
 ' 2>/dev/null || echo "(docker exec failed)"
 
 echo ""
-echo "=== Last docker errors ==="
-docker logs facebook-news-n8n --tail 30 2>&1 | grep -iE 'error|Error|execution|webhook|Code' | tail -15 || true
+echo "=== Last docker [PIPELINE] lines ==="
+docker logs facebook-news-n8n --tail 60 2>&1 | grep -iE '\[PIPELINE\]|WEBHOOK_TEST|Problem in node|assertWebhook' | tail -20 || true

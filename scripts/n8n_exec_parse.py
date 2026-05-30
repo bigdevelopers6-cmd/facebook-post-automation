@@ -110,9 +110,19 @@ def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
         plog = re.search(r'"pipelineLog"\s*:\s*\[(.*?)\]', raw_text, re.S)
         if plog:
             entries = re.findall(r'"([^"]{15,250})"', plog.group(1))
-            if entries:
-                lines.append("--- pipelineLog in staticData ---")
-                lines.extend(entries[-20:])
+            runtime = [
+                e for e in entries
+                if "const __sd" not in e
+                and "prepareCategory\\" not in e
+                and "return [{ json" not in e
+                and len(e) < 220
+            ]
+            if runtime:
+                lines.append("--- pipelineLog (runtime) ---")
+                lines.extend(runtime[-20:])
+            elif entries:
+                lines.append("--- pipelineLog (may include workflow definition noise) ---")
+                lines.extend(entries[-8:])
 
     seen = set()
     out: list[str] = []
@@ -135,6 +145,7 @@ def scan_raw_execution(raw_text: str) -> dict:
     for name in (
         "webhookSetup", "evaluateProductionApis", "filterArticles", "mergeNewsFeeds",
         "mergeScheduleWithArticles", "prepareSlotWait", "publishToFacebook", "skipHalted",
+        "assertWebhookPost", "PUBLISH_OK", "WEBHOOK_TEST_NO_POST",
     ):
         c = raw_text.count(f'"{name}"')
         if c:

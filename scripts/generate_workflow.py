@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v6-fix"
+WORKFLOW_BUILD = "2026-05-30-trace-v7-webhook-assert"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -1032,6 +1032,7 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = rf"""const staticData = $getWorkflowStaticData('global');
 staticData.pipelineLog = ['BUILD={WORKFLOW_BUILD} webhookSetup'];
 staticData.webhookBypassGate = true;
+staticData.postedURLs = [];
 staticData.todaySchedule = [{{
   slotIndex: 1,
   epochMs: Date.now() + 1000,
@@ -1079,6 +1080,23 @@ CATEGORY_PREP = r"""const __sdC=$getWorkflowStaticData('global');
 (__sdC.pipelineLog=__sdC.pipelineLog||[]).push('prepareCategory: start fetch');
 console.log('[PIPELINE] prepareCategory');
 return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];"""
+
+ASSERT_WEBHOOK_POST = r"""const staticData = $getWorkflowStaticData('global');
+const log = staticData.pipelineLog || [];
+const wasWebhook = staticData.webhookBypassGate === true;
+staticData.webhookBypassGate = false;
+const __sdA=$getWorkflowStaticData('global');
+(__sdA.pipelineLog=__sdA.pipelineLog||[]).push('assertWebhookPost: wasWebhook='+wasWebhook+' published='+log.some(l=>String(l).includes('PUBLISH_OK')));
+console.log('[PIPELINE] assertWebhookPost', wasWebhook, log.slice(-8).join(' | '));
+if (wasWebhook) {
+  const published = log.some(l => String(l).includes('PUBLISH_OK'));
+  if (!published) {
+    const trace = log.slice(-25).join(' | ');
+    throw new Error('WEBHOOK_TEST_NO_POST: Facebook publish never ran. Trace: ' + trace);
+  }
+}
+return [{ json: { webhookAssert: wasWebhook ? 'posted' : 'scheduled_done', trace: log.slice(-30) } }];
+"""
 
 MERGE_NEWS_FEEDS = r"""function safeArticles(nodeName) {
   try {
@@ -1343,12 +1361,12 @@ N["fetchPoliticsNews"] = add_node(node(
     "fetchPoliticsNews", "n8n-nodes-base.httpRequest", [X(4), Y0],
     {
         "method": "GET",
-        "url": "https://newsapi.org/v2/everything",
+        "url": "https://newsapi.org/v2/top-headlines",
         "sendQuery": True,
         "queryParameters": {"parameters": [
-            {"name": "q", "value": "(politics OR election OR Congress OR Senate OR \"White House\" OR President) AND United States"},
-            {"name": "language", "value": "en"},
-            {"name": "sortBy", "value": "publishedAt"},
+            {"name": "country", "value": "us"},
+            {"name": "category", "value": "general"},
+            {"name": "q", "value": "politics OR election OR Congress OR President"},
             {"name": "pageSize", "value": "25"},
         ]},
         **NEWSAPI_HEADERS,
@@ -1414,6 +1432,10 @@ N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10
 N["splitInBatches"] = add_node(node(
     "splitInBatches", "n8n-nodes-base.splitInBatches", [X(0), Y1],
     {"batchSize": 1, "options": {}}, typeVersion=3,
+))
+N["assertWebhookPost"] = add_node(node(
+    "assertWebhookPost", "n8n-nodes-base.code", [X(0), Y1 + 280],
+    {"jsCode": ASSERT_WEBHOOK_POST}, typeVersion=2,
 ))
 N["prepareSlotWait"] = add_node(node("prepareSlotWait", "n8n-nodes-base.code", [X(1), Y1], {"jsCode": PREPARE_SLOT_WAIT}, typeVersion=2))
 N["checkHalted"] = add_node(node(
@@ -1937,6 +1959,7 @@ wire("mergeScheduleWithArticles", "logMergeStats")
 wire("logMergeStats", "splitInBatches")
 
 wire("splitInBatches", "prepareSlotWait", 0)  # current batch output
+wire("splitInBatches", "assertWebhookPost", 1)  # loop done — fail webhook if no PUBLISH_OK
 wire("prepareSlotWait", "checkHalted")
 wire("checkHalted", "preparePostSkippedEmail", 0)  # halted true
 wire("preparePostSkippedEmail", "emailPostSkipped")

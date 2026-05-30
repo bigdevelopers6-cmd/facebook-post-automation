@@ -20,7 +20,8 @@ sleep 25
 
 echo ""
 echo "=== Verify workflow in container ==="
-docker exec facebook-news-n8n sh -c 'grep -o trace-v6-fix /tmp/workflow.json | head -1' || echo "(import file check failed)"
+docker exec facebook-news-n8n sh -c 'grep -o trace-v7-webhook-assert /tmp/workflow.json | head -1' || echo "(import file check failed)"
+docker exec facebook-news-n8n sh -c 'grep -c assertWebhookPost /tmp/workflow.json' || true
 
 echo ""
 echo "=== Quick env check (keys must be non-empty) ==="
