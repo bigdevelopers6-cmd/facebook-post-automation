@@ -18,11 +18,15 @@ echo ""
 echo "=== Import workflow ==="
 docker cp workflow/facebook-us-news-automation.json facebook-news-n8n:/tmp/workflow.json
 docker exec facebook-news-n8n n8n import:workflow --input=/tmp/workflow.json
-docker exec facebook-news-n8n n8n publish:workflow --id=facebook-us-news-001
 docker restart facebook-news-n8n
 
-echo "Waiting 25s for n8n..."
-sleep 25
+echo "Waiting 30s for n8n..."
+sleep 30
+
+echo "=== Publish workflow (registers 6:45 AM schedule) ==="
+docker exec facebook-news-n8n n8n publish:workflow --id=facebook-us-news-001 2>/dev/null || true
+# Legacy n8n: ensure active flag (harmless on n8n 2.x)
+docker exec facebook-news-n8n n8n update:workflow --id=facebook-us-news-001 --active=true 2>/dev/null || true
 
 echo ""
 echo "=== Verify workflow in container ==="

@@ -48,12 +48,34 @@ wf = curl_json(f"http://localhost:5678/rest/workflows/{wf_id}")
 data = wf.get("data") or wf
 active = data.get("active")
 name = data.get("name", wf_id)
+version_id = data.get("versionId") or data.get("activeVersionId") or ""
 print(f"Workflow name: {name}")
-print(f"Workflow ACTIVE (required for auto posts): {active}")
+print(f"Workflow ACTIVE / published (required for 6:45 AM cron): {active}")
+if version_id:
+    print(f"Published version id: {str(version_id)[:36]}")
 if active is not True:
     print("")
-    print("[!!] Auto posting is OFF until the workflow is Active in n8n UI.")
-    print("    Open http://YOUR_IP:5678 → workflow → toggle Active (top right).")
+    print("[!!] Auto posting is OFF until the workflow is Published/Active in n8n UI.")
+    print("    Open n8n → workflow → Publish (or toggle Active on older n8n).")
+    print("    Then: bash scripts/server-deploy.sh")
+print("")
+
+# Container uptime vs today's 6:45 AM ET
+try:
+    r = subprocess.run(
+        ["docker", "inspect", "-f", "{{.State.StartedAt}}", "facebook-news-n8n"],
+        capture_output=True, text=True,
+    )
+    if r.returncode == 0 and r.stdout.strip():
+        started_utc = datetime.fromisoformat(r.stdout.strip().replace("Z", "+00:00"))
+        started_et = started_utc.astimezone(ZoneInfo("America/New_York"))
+        print(f"n8n container started (ET): {started_et.strftime('%Y-%m-%d %H:%M %Z')}")
+        today_645 = datetime.now(ZoneInfo("America/New_York")).replace(hour=6, minute=45, second=0, microsecond=0)
+        if started_et > today_645:
+            print("[!!] Container started AFTER today's 6:45 AM ET — today's auto batch was skipped.")
+            print("    First automatic run: tomorrow 6:45 AM ET (keep container running).")
+except Exception:
+    pass
 print("")
 
 execs = curl_json(f"http://localhost:5678/rest/executions?limit=50&workflowId={wf_id}")
@@ -174,14 +196,24 @@ print(" Summary")
 print("==============================================")
 ok = active is True
 if ok and schedule_runs:
-    print("[OK]  Workflow is Active and schedule executions exist.")
+    print("[OK]  Daily auto has run at least once (mode=trigger in executions).")
 elif ok and not schedule_runs:
-    print("[??]  Workflow is Active but no schedule runs in last 50 executions.")
-    print("      Wait for 6:45 AM ET or run a full-day test: n8n Manual → command run-now")
+    print("[!!]  Daily auto has NOT run yet on this server.")
+    print("")
+    print("  What your check shows:")
+    print("  - Workflow is ON (good).")
+    print("  - All recent runs are webhook/manual tests only (run-now.sh).")
+    print("  - Page posts today (~5:30–6 PM ET) are from those tests, not the 6:45 AM job.")
+    print("")
+    print("  Most likely: n8n was stopped or workflow was not published at 6:45 AM ET.")
+    print("  Fix: keep n8n up 24/7, then verify tomorrow after 7 AM ET:")
+    print("       bash scripts/check-auto-schedule.sh")
+    print("       (look for mode=trigger execution)")
 else:
-    print("[!!]  Turn workflow ACTIVE in n8n to enable daily auto posting.")
+    print("[!!]  Turn workflow ON in n8n, then bash scripts/server-deploy.sh")
 print("")
-print("Manual test (webhook):  bash scripts/run-now.sh")
-print("Full 10-slot test now:  n8n → Manual Trigger → setAutoCommand command=run-now")
+print("Manual 1-post test:     bash scripts/run-now.sh")
+print("Manual 10-post test:    n8n → Manual Trigger → setAutoCommand → run-now")
+print("Re-register schedule:   bash scripts/server-deploy.sh")
 print("Page:                   https://www.facebook.com/" + fb_page)
 PY
