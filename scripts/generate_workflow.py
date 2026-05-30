@@ -97,7 +97,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v4"
+WORKFLOW_BUILD = "2026-05-30-trace-v5"
 
 PIPELINE_LOG_FN = r"""
 function pipelineLog(msg) {
@@ -112,10 +112,19 @@ function pipelineLog(msg) {
 """
 
 
-def with_pipeline_log(code: str) -> str:
-    if "function pipelineLog(" in code:
-        return code
-    return PIPELINE_LOG_FN + "\n" + code
+def with_pipeline_log(code: str, node_label: str = "code") -> str:
+    body = code.strip()
+    if "__fatalCodeError" in body and "try {" in body:
+        return body
+    return (
+        PIPELINE_LOG_FN
+        + "\ntry {\n"
+        + body
+        + "\n} catch (fatal) {\n"
+        + "  pipelineLog('FATAL [" + node_label + "]: ' + (fatal && fatal.message ? fatal.message : String(fatal)));\n"
+        + "  return [{ json: { __fatalCodeError: true, node: '" + node_label + "', message: (fatal && fatal.message) || String(fatal), pipelineTrace: ($getWorkflowStaticData('global').pipelineLog || []).slice(-20) } }];\n"
+        + "}\n"
+    )
 
 
 # --- Code snippets ---
@@ -298,7 +307,7 @@ const output = mixed.map(a => ({
   isRepost: false,
 }));
 
-pipelineLog(`FILTER primary=${primary.length} output=${output.length} needed=${10 - output.length} testMode=${testMode}`);
+pipelineLog('FILTER primary=' + primary.length + ' output=' + output.length + ' needed=' + (10 - output.length) + ' testMode=' + testMode);
 if (output.length === 0) {
   throw new Error(`FILTER_ARTICLES: 0 usable articles (raw=${primary.length}, postedCache=${postedURLs.length}). Try flush-cache or check NewsAPI quota.`);
 }
@@ -377,7 +386,7 @@ if (articles.length < 10) {
 if (articles.length === 0) {
   throw new Error('FILL_REMAINING: 0 articles after filter and NewsAPI fallback — check NEWSAPI_KEY, quota, or flush-cache.');
 }
-pipelineLog(`FILL finalCount=${articles.length}`);
+pipelineLog('FILL finalCount=' + articles.length);
 
 return articles.slice(0, 10).map((a, idx) => ({
   json: { ...a, articleIndex: idx + 1 }
@@ -387,7 +396,7 @@ return articles.slice(0, 10).map((a, idx) => ({
 MERGE_SCHEDULE_ARTICLES = with_pipeline_log(r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
 let items = $input.all().map(i => i.json);
-pipelineLog(`MERGE_SCHEDULE inputItems=${items.length}`);
+pipelineLog('MERGE_SCHEDULE inputItems=' + items.length);
 if (items.length === 0) {
   throw new Error('MERGE_SCHEDULE: No articles to post — NewsAPI empty or all URLs in posted cache. Run flush-cache.');
 }
@@ -426,7 +435,7 @@ if (staticData.circuitBreakerHalted) {
   return [{ json: { ...item, halted: true, skipReason: 'CIRCUIT_BREAKER' } }];
 }
 const waitMs = Math.max(0, item.epochMs - Date.now());
-pipelineLog(`SLOT waitMs=${waitMs} title=${(item.title || '').slice(0, 60)}`);
+  pipelineLog('SLOT waitMs=' + waitMs + ' title=' + (item.title || '').slice(0, 60));
 return [{ json: { ...item, waitMs, halted: false } }];
 """)
 
@@ -459,7 +468,7 @@ if (!allApisHealthy) {
   staticData.productionHalted = false;
   staticData.circuitBreakerHalted = false;
 }
-pipelineLog(`GATE healthy=${allApisHealthy} failures=${failures.length} ${failures.map(f => f.api).join(',') || 'none'}`);
+pipelineLog('GATE healthy=' + allApisHealthy + ' failures=' + failures.length + ' ' + (failures.map(function(f) { return f.api; }).join(',') || 'none'));
 return [{
   json: {
     allApisHealthy,
@@ -1033,7 +1042,8 @@ return [{ json: { command: 'run-now', todaySchedule: schedule } }];
 AUTO_TEST_ONE = with_pipeline_log(
     rf"""const staticData = $getWorkflowStaticData('global');
 staticData.pipelineLog = [];
-pipelineLog('BUILD={WORKFLOW_BUILD} webhook test-one started');
+pipelineLog('BUILD={WORKFLOW_BUILD} webhook test-one started (gate bypassed)');
+staticData.webhookBypassGate = true;
 staticData.todaySchedule = [{{
   slotIndex: 1,
   epochMs: Date.now() + 1000,
@@ -1077,8 +1087,11 @@ return [{ json: { command: 'reset-errors', cleared: true } }];
 AUTO_HEALTH_CHECK = r"""return [{ json: { command: 'health-check', pingApis: true } }];
 """
 
-CATEGORY_PREP = r"""return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];
-"""
+CATEGORY_PREP = with_pipeline_log(
+    r"""pipelineLog('prepareCategory — starting news fetch');
+return [{ json: { topicLabel: 'politics+celebrities', category: 'entertainment' } }];""",
+    "prepareCategory",
+)
 
 MERGE_NEWS_FEEDS = with_pipeline_log(r"""function safeArticles(nodeName) {
   try {
@@ -2022,9 +2035,9 @@ wire("scheduleTrigger11PM", "dailySummary")
 wire("dailySummary", "sendDailyReport")
 wire("sendDailyReport", "writeDailyReportFile")
 
-# Webhook trigger (curl-friendly)
+# Webhook trigger (curl-friendly) — bypass production gate for manual test posts
 wire("webhookTrigger", "webhookSetup")
-wire("webhookSetup", "productionGateNewsAPI")
+wire("webhookSetup", "prepareCategory")
 
 # Manual /auto commands
 wire("manualTrigger", "setAutoCommand")

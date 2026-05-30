@@ -9,7 +9,7 @@ WF_ID="${WF_ID:-facebook-us-news-001}"
 FB_PAGE="${FB_PAGE_ID:-1191676374021102}"
 POLL_SECS="${POLL_SECS:-120}"
 POLL_INTERVAL="${POLL_INTERVAL:-3}"
-WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v4}"
+WORKFLOW_BUILD_EXPECT="${WORKFLOW_BUILD_EXPECT:-2026-05-30-trace-v5}"
 
 n8n_login() {
   curl -s -c /tmp/n8n-cookies.txt -X POST http://localhost:5678/rest/login \
@@ -148,18 +148,24 @@ bash scripts/execution-report.sh "$EXEC_ID" 2>/dev/null || {
   echo "(execution-report.sh missing — run git pull)"
 }
 
-if [ -s data/reports/pipeline.log ]; then
-  if grep -q 'PUBLISH_OK' data/reports/pipeline.log; then
-    echo ""
-    echo "[OK]  POST LIKELY SUCCEEDED (see PUBLISH_OK in pipeline.log)"
-  elif grep -qE 'FILTER_ARTICLES: 0|MERGE_NEWS_FEEDS: 0|MERGE_SCHEDULE: 0|SKIP_HALTED|HALT production' data/reports/pipeline.log; then
-    echo ""
-    echo "[!!] ROOT CAUSE in pipeline.log (see lines above)"
-  elif [ "$ELAPSED" -lt 8 ] 2>/dev/null; then
-    echo ""
-    echo "[!!] No pipeline.log lines — workflow build not deployed or wrong execution ID"
-  fi
-else
-  echo ""
-  echo "[!!] pipeline.log is EMPTY — redeploy: bash scripts/server-deploy.sh"
-fi
+python3 << PY
+import json, re, sys
+from pathlib import Path
+sys.path.insert(0, str(Path("scripts").resolve()))
+from n8n_exec_parse import extract_execution_error
+try:
+    root = json.load(open("/tmp/exec.json"))
+    raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
+    errs = extract_execution_error(root, raw)
+    text = " ".join(errs)
+    if "PUBLISH_OK" in text:
+        print("\n[OK]  POST LIKELY SUCCEEDED (PUBLISH_OK in trace)")
+    elif re.search(r"HALT|GATE healthy=false|0 articles|FILTER_|MERGE_|SKIP_HALTED", text, re.I):
+        print("\n[!!] ROOT CAUSE — see Pipeline trace section above")
+    elif "${STATUS}" == "error":
+        print("\n[!!] Execution ERROR — see section 1 in report (trace-v5 bypasses gate on webhook)")
+    elif int("${ELAPSED:-99}") < 8:
+        print("\n[!!] Fast finish — likely gate halt or empty articles")
+except Exception as e:
+    print("\n[!!] Could not parse trace:", e)
+PY

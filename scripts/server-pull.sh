@@ -11,12 +11,12 @@ git pull origin main
 
 MARKERS=$(grep -c 'function pipelineLog' workflow/facebook-us-news-automation.json || echo 0)
 BUILD=$(grep -o 'workflowBuild[^,}]*' workflow/facebook-us-news-automation.json | head -1 || echo "")
-HAS_V4=$(grep -c 'trace-v4' workflow/facebook-us-news-automation.json || echo 0)
+HAS_V5=$(grep -c 'trace-v5' workflow/facebook-us-news-automation.json || echo 0)
 echo "After:  $(git rev-parse --short HEAD)"
 echo "pipelineLog markers in workflow: $MARKERS"
 echo "meta: $BUILD"
 
-if [ "${MARKERS:-0}" -lt 3 ] || [ "${HAS_V4:-0}" -lt 1 ]; then
+if [ "${MARKERS:-0}" -lt 3 ] || [ "${HAS_V5:-0}" -lt 1 ]; then
   echo ""
   echo "[!!] ERROR: Workflow on disk is OLD (missing pipeline tracing)."
   echo "     On your PC run: git push origin main"

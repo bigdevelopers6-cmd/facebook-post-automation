@@ -91,8 +91,10 @@ def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
     if raw_text:
         for pat in (
             r'"lastNodeExecuted"\s*:\s*"([^"]+)"',
+            r'"__fatalCodeError"\s*:\s*true',
+            r'"node"\s*:\s*"([^"]+)"[^}]*"message"\s*:\s*"([^"]{10,400})"',
             r'"description"\s*:\s*"([^"]{15,400})"',
-            r'"message"\s*:\s*"((?:FILTER|MERGE|GATE|HALT|NewsAPI|Error)[^"]{10,400})"',
+            r'"message"\s*:\s*"((?:FILTER|MERGE|GATE|HALT|FATAL|NewsAPI|Error)[^"]{10,400})"',
             r'"message"\s*:\s*"([^"]*(?:articles|token|API|halt)[^"]{5,400})"',
         ):
             for m in re.finditer(pat, raw_text, re.I):
