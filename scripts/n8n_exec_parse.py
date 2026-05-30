@@ -126,12 +126,14 @@ def extract_execution_error(root: dict, raw_text: str = "") -> list[str]:
             lines.append(f"nested error.message: {text[:1500]}")
 
     if raw_text:
-        wh = re.search(
-            r'WEBHOOK_TEST_NO_POST[^"\\]{0,1200}',
-            raw_text.replace("\\n", " ").replace('\\"', '"'),
-        )
+        compact = raw_text.replace("\\n", " ")
+        wh = re.search(r'WEBHOOK_TEST_NO_POST_[A-Z_]+ Trace=[^"\\]{20,800}', compact)
         if wh:
-            lines.append("raw: " + wh.group(0)[:1200])
+            lines.append("runtime: " + wh.group(0)[:1200])
+        elif "WEBHOOK_TEST_NO_POST_" in compact and "+ hint +" not in compact:
+            wh2 = re.search(r'WEBHOOK_TEST_NO_POST_[A-Z_]+[^"\\]{0,400}', compact)
+            if wh2:
+                lines.append("runtime: " + wh2.group(0)[:800])
         for pat in (
             r'"lastNodeExecuted"\s*:\s*"([^"]+)"',
             r'"__fatalCodeError"\s*:\s*true',
