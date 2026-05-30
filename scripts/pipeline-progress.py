@@ -25,16 +25,16 @@ PIPELINE = [
         "checkFBToken", "parseFBToken", "tokenGate", "skipInvalidToken",
     ]),
     ("caption", "6. AI caption (Claude → Groq → Gemini)", [
-        "generateCaptionWithFallback", "checkCaptionGenerated", "prePublishReviewWithFallback",
-        "checkLlmHalt", "rewriteCaptionWithFallback",
+        "captionAnthropic", "captionGroq", "captionGemini",
+        "extractCaptionFromApi", "extractCaptionGroq", "extractCaptionGemini",
+        "checkCaptionGenerated", "gateCaptionGroq", "gateCaptionGemini",
+        "prePublishAuto", "haltLlmFailed",
     ]),
     ("review", "7. Compliance review", [
-        "reviewGate", "markCaptionReviewPassed", "captionReviewReadyGate",
-        "logSkippedCompliance",
+        "prePublishAuto", "markCaptionReviewPassed", "reviewGate",
     ]),
     ("image", "8. Image (NewsAPI photo)", [
-        "buildImagePrompt", "imageReview", "parseImageReview", "imageReviewGate",
-        "applyImageFallback", "mergeImagePaths", "finalPublishGate", "logBlockedPublish",
+        "buildImagePrompt", "applyImageFallback", "mergeImagePaths", "finalPublishGate",
     ]),
     ("publish", "9. Publish to Facebook", [
         "publishToFacebook", "handlePublishSuccess", "handlePublishError",

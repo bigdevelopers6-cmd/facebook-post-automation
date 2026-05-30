@@ -36,6 +36,8 @@ curl -s -b /tmp/n8n-cookies.txt \
 
 python3 << 'PY'
 import json
+from pathlib import Path
+
 with open("/tmp/exec.json") as f:
     root = json.load(f)
 
@@ -47,16 +49,19 @@ if isinstance(inner, str):
 rd = {}
 if isinstance(inner, dict):
     rd = inner.get("resultData") or inner
+elif isinstance(inner, list):
+    for item in inner:
+        if isinstance(item, dict) and (item.get("runData") or item.get("resultData")):
+            rd = item.get("resultData") or item
+            break
 elif isinstance(data.get("resultData"), dict):
     rd = data["resultData"]
 
 run = rd.get("runData", {}) if isinstance(rd, dict) else {}
-print("Last node:", rd.get("lastNodeExecuted") if isinstance(rd, dict) else None)
-print("Nodes ran:", len(run) if isinstance(run, dict) else 0)
 
-if not run:
-    print("No runData — open n8n UI -> Executions for this ID")
-else:
+if run:
+    print("Last node:", rd.get("lastNodeExecuted"))
+    print("Nodes ran:", len(run))
     for n, runs in run.items():
         r = runs[0] if runs else {}
         st = r.get("executionStatus", "?")
@@ -66,7 +71,24 @@ else:
             msg = err.get("message", str(err))[:120] if isinstance(err, dict) else str(err)[:120]
             line += f"  ERR: {msg}"
         print(line)
+else:
+    import re
+    raw = Path("/tmp/exec.json").read_text(encoding="utf-8")
+    names = re.findall(r'"lastNodeExecuted"\s*:\s*"([^"]+)"', raw)
+    if names:
+        print("Last node (from raw JSON):", names[-1])
+    found = re.findall(r'"node"\s*:\s*"([^"]+)"', raw)
+    if found:
+        print("Node refs in file:", len(set(found)))
+        for n in sorted(set(found))[-25:]:
+            print("  [?]", n)
+    else:
+        print("No runData in API response — use docker logs below")
 PY
+
+echo ""
+echo "=== Nodes from docker logs (last 3 min) ==="
+docker logs facebook-news-n8n --since 3m 2>&1 | grep -oE '(Finished|Executing|Started) (node|workflow) "[^"]+"|"name": "[^"]+"' | tail -25 || echo "(none)"
 
 echo ""
 echo "=== Recent log errors ==="

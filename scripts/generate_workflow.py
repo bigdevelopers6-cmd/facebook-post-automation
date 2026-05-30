@@ -1385,11 +1385,76 @@ IMAGE_GEN_PROMPT_SUFFIX = (
     "Authentic press-photo feel, NOT illustration, NO text, NO logos, NO watermarks, NO emoji characters in the image."
 )
 
+N["captionAnthropic"] = add_node(node(
+    "captionAnthropic", "n8n-nodes-base.httpRequest", [X(7), Y2],
+    {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": True,
+        "headerParameters": {"parameters": [
+            {"name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}"},
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "content-type", "value": "application/json"},
+        ]},
+        "sendBody": True,
+        "specifyBody": "json",
+        "jsonBody": '={{ JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 350, system: ' + json.dumps(CAPTION_SYSTEM) + ', messages: [{ role: "user", content: ' + CAPTION_USER_BODY + ' }] }) }}',
+    },
+    typeVersion=4.2, onError="continueErrorOutput",
+))
+N["captionGroq"] = add_node(node(
+    "captionGroq", "n8n-nodes-base.httpRequest", [X(7), Y2 + 80],
+    {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": True,
+        "headerParameters": {"parameters": [
+            {"name": "Authorization", "value": "={{ 'Bearer ' + $env.GROQ_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+        ]},
+        "sendBody": True,
+        "specifyBody": "json",
+        "jsonBody": '={{ JSON.stringify({ model: ($env.GROQ_MODEL || "llama-3.1-8b-instant"), max_tokens: 350, messages: [{ role: "system", content: ' + json.dumps(CAPTION_SYSTEM) + ' }, { role: "user", content: ' + CAPTION_USER_BODY + ' }] }) }}',
+    },
+    typeVersion=4.2, onError="continueErrorOutput",
+))
+N["captionGemini"] = add_node(node(
+    "captionGemini", "n8n-nodes-base.httpRequest", [X(7), Y2 + 160],
+    {
+        "method": "POST",
+        "url": '={{ "https://generativelanguage.googleapis.com/v1beta/models/" + (($env.GEMINI_MODEL || "gemini-1.5-flash").split(",")[0].trim()) + ":generateContent?key=" + $env.GEMINI_API_KEY }}',
+        "sendHeaders": True,
+        "headerParameters": {"parameters": [{"name": "Content-Type", "value": "application/json"}]},
+        "sendBody": True,
+        "specifyBody": "json",
+        "jsonBody": '={{ JSON.stringify({ systemInstruction: { parts: [{ text: ' + json.dumps(CAPTION_SYSTEM) + ' }] }, contents: [{ role: "user", parts: [{ text: ' + CAPTION_USER_BODY + ' }] }], generationConfig: { maxOutputTokens: 350 } }) }}',
+    },
+    typeVersion=4.2, onError="continueErrorOutput",
+))
+N["extractCaptionGroq"] = add_node(node("extractCaptionGroq", "n8n-nodes-base.code", [X(8), Y2 + 80], {"jsCode": EXTRACT_CAPTION_FROM_API}, typeVersion=2))
+N["extractCaptionGemini"] = add_node(node("extractCaptionGemini", "n8n-nodes-base.code", [X(8), Y2 + 160], {"jsCode": EXTRACT_CAPTION_FROM_API}, typeVersion=2))
+N["gateCaptionGroq"] = add_node(node(
+    "gateCaptionGroq", "n8n-nodes-base.if", [X(9), Y2 + 80],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "gg1", "leftValue": "={{ $json.captionGenerated }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
+))
+N["gateCaptionGemini"] = add_node(node(
+    "gateCaptionGemini", "n8n-nodes-base.if", [X(9), Y2 + 160],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "gm1", "leftValue": "={{ $json.captionGenerated }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
+))
+N["haltLlmFailed"] = add_node(node("haltLlmFailed", "n8n-nodes-base.code", [X(9), Y2 + 160], {"jsCode": HALT_LLM_FAILED}, typeVersion=2))
+N["prePublishAuto"] = add_node(node("prePublishAuto", "n8n-nodes-base.code", [X(10), Y2], {"jsCode": PRE_PUBLISH_AUTO}, typeVersion=2))
 N["generateCaptionWithFallback"] = add_node(node(
-    "generateCaptionWithFallback", "n8n-nodes-base.code", [X(7), Y2],
-    {"jsCode": GENERATE_CAPTION_WITH_FALLBACK},
+    "generateCaptionWithFallback", "n8n-nodes-base.code", [X(7), Y2 - 80],
+    {"jsCode": "// deprecated — use captionAnthropic → captionGroq → captionGemini HTTP chain\nreturn $input.all();"},
     typeVersion=2,
 ))
+N["extractCaptionFromApi"] = add_node(node("extractCaptionFromApi", "n8n-nodes-base.code", [X(8), Y2], {"jsCode": EXTRACT_CAPTION_FROM_API}, typeVersion=2))
 N["checkCaptionGenerated"] = add_node(node(
     "checkCaptionGenerated", "n8n-nodes-base.if", [X(8), Y2],
     {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
@@ -1773,33 +1838,26 @@ wire("tokenGate", "prepareTokenAlertEmail", 0)  # skip posting — token invalid
 wire("prepareTokenAlertEmail", "emailTokenExpired")
 wire("emailTokenExpired", "skipInvalidToken")
 wire("skipInvalidToken", "loopBack")
-wire("tokenGate", "generateCaptionWithFallback", 1)  # token ok — skip slot email (SMTP often unset on server)
-wire("generateCaptionWithFallback", "checkCaptionGenerated")
-wire("checkCaptionGenerated", "prePublishReviewWithFallback", 0)
-wire("checkCaptionGenerated", "haltProduction", 1)
-wire("prePublishReviewWithFallback", "checkLlmHalt")
-wire("checkLlmHalt", "reviewGate", 0)
-wire("checkLlmHalt", "haltProduction", 1)
-wire("reviewGate", "markCaptionReviewPassed", 0)  # approved — mandatory review layer
-wire("reviewGate", "incrementRewriteAttempt", 1)  # rejected
-wire("markCaptionReviewPassed", "captionReviewReadyGate")
-wire("captionReviewReadyGate", "buildImagePrompt", 0)
-wire("incrementRewriteAttempt", "checkRewriteAttempts")
-wire("checkRewriteAttempts", "logSkippedCompliance", 0)  # max retries exceeded
-wire("checkRewriteAttempts", "rewriteCaptionWithFallback", 1)
-wire("rewriteCaptionWithFallback", "checkCaptionGenerated")
-wire("logSkippedCompliance", "preparePostSkippedEmail")
-wire("captionReviewReadyGate", "logBlockedPublish", 1)
-
-wire("buildImagePrompt", "imageReview")
-wire("imageReview", "parseImageReview", 0)
-wire("imageReview", "applyImageFallback", 1)  # API error — use NewsAPI photo
-wire("parseImageReview", "imageReviewGate")
-wire("imageReviewGate", "applyImageFallback", 0)  # use NewsAPI image (skip OpenAI DALL-E)
-wire("imageReviewGate", "applyImageFallback", 1)  # rejected prompt — still use NewsAPI image
-wire("applyImageFallback", "prepareImageFallbackEmail")
-wire("prepareImageFallbackEmail", "emailImageFallbackUsed")
-wire("emailImageFallbackUsed", "mergeImagePaths")
+wire("tokenGate", "captionAnthropic", 1)
+wire("captionAnthropic", "extractCaptionFromApi", 0)
+wire("captionAnthropic", "captionGroq", 1)
+wire("extractCaptionFromApi", "checkCaptionGenerated")
+wire("checkCaptionGenerated", "prePublishAuto", 0)
+wire("checkCaptionGenerated", "captionGroq", 1)
+wire("captionGroq", "extractCaptionGroq", 0)
+wire("captionGroq", "captionGemini", 1)
+wire("extractCaptionGroq", "gateCaptionGroq")
+wire("gateCaptionGroq", "prePublishAuto", 0)
+wire("gateCaptionGroq", "captionGemini", 1)
+wire("captionGemini", "extractCaptionGemini", 0)
+wire("captionGemini", "haltLlmFailed", 1)
+wire("extractCaptionGemini", "gateCaptionGemini")
+wire("gateCaptionGemini", "prePublishAuto", 0)
+wire("gateCaptionGemini", "haltLlmFailed", 1)
+wire("haltLlmFailed", "haltProduction")
+wire("prePublishAuto", "buildImagePrompt")
+wire("buildImagePrompt", "applyImageFallback")
+wire("applyImageFallback", "mergeImagePaths")
 wire("slotApiGateOpenAI", "evaluateSlotOpenAI")
 wire("evaluateSlotOpenAI", "slotOpenAIPass")
 wire("slotOpenAIPass", "generateImage", 0)
