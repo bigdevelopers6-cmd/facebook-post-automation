@@ -1141,7 +1141,7 @@ function isDirectImageUrl(u) {
     const p = url.pathname.toLowerCase();
     if (/\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(p)) return true;
     const h = url.hostname;
-    if (/unsplash|cloudfront|akamai|imgur|fbcdn|googleusercontent|images\./i.test(h)) return true;
+    if (/unsplash\.com|cloudfront|akamai|imgur|fbcdn|googleusercontent/i.test(h)) return true;
   } catch (e) { return false; }
   return false;
 }
@@ -1302,6 +1302,7 @@ if (wasWebhook && !published) {
   else if (log.some(l => String(l).includes('SKIP_TOKEN'))) hint = 'TOKEN_INVALID';
   else if (log.some(l => String(l).includes('BLOCKED_PUBLISH'))) hint = 'BLOCKED_PUBLISH';
   else if (log.some(l => String(l).includes('SKIP_HALTED'))) hint = 'SLOT_HALTED';
+  else if (log.some(l => String(l).includes('pages_manage_posts') || String(l).includes('pages_read_engagement'))) hint = 'FB_TOKEN_MISSING_PERMISSIONS';
   else if (log.some(l => String(l).includes('PUBLISH_FAIL'))) hint = 'FACEBOOK_PUBLISH_ERROR';
   else if (log.some(l => String(l).includes('gatePublishFeed'))) hint = 'FEED_PUBLISH_FAILED';
   let fileTail = '';

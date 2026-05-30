@@ -165,6 +165,10 @@ try:
             print("    Likely fix: bash scripts/server-deploy.sh (need v9 webhookSlotFast)")
         elif "NO_WEBHOOK_PREPARE" in text or "NO_TOKEN_CHECK" in text:
             print("    Likely fix: v9 deploy + valid FB_ACCESS_TOKEN in .env")
+        elif "pages_manage_posts" in text or "pages_read_engagement" in text or "PUBLISH_FAIL" in raw and "403" in raw:
+            print("    Fix: Page token missing publish permissions.")
+            print("    Run: bash scripts/check-fb-token.sh")
+            print("    Regenerate System User token with pages_manage_posts + pages_read_engagement")
         elif "SKIP_TOKEN_INVALID" in text or "TOKEN_INVALID" in text or "parseFBToken: valid=false" in text:
             print("    Likely fix: renew FB_ACCESS_TOKEN in .env, then docker compose up -d")
         elif "BLOCKED_PUBLISH" in text:
