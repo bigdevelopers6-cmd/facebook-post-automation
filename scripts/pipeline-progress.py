@@ -57,16 +57,15 @@ RAW_TRACE_MARKERS = [
     ("prepareCategory: start fetch", "news", "done"),
     ("mergeNewsFeeds:", "news", "done"),
     ("filterArticles:", "news", "done"),
+    ("pickFirstArticle:", "news", "done"),
     ("logMergeStats: items=", "news", "done"),
     ("prepareSlotWait: forcePostTest", "slot", "done"),
     ("parseFBToken: valid=false", "token", "failed"),
     ("SKIP_TOKEN_INVALID", "token", "skipped"),
-    ("SKIP_HALTED", "slot", "skipped"),
-    ("BLOCKED_PUBLISH", "image", "skipped"),
+    ("SKIP_HALTED:", "slot", "skipped"),
+    ("BLOCKED_PUBLISH:", "image", "skipped"),
     ("webhookEnsurePublish:", "image", "done"),
-    ("PUBLISH_OK postId=", "publish", "done"),
-    ("WEBHOOK_TEST_NO_POST", "finish", "failed"),
-    ("assertWebhookPost", "finish", "failed"),
+    ("LOOP_EMPTY", "slot", "failed"),
 ]
 
 
@@ -200,10 +199,11 @@ def infer_from_raw(raw: str, exec_status: str | None) -> dict[str, tuple[str, st
         if marker in blob:
             states[step_key] = (default_state, marker[:60])
 
-    if exec_status == "error" and "WEBHOOK_TEST_NO_POST" in blob:
-        states["finish"] = ("failed", "WEBHOOK_TEST_NO_POST")
-    if "PUBLISH_OK postId=" in blob and re.search(r"PUBLISH_OK postId=\d{6,}", blob):
+    if re.search(r"PUBLISH_OK postId=\d{6,}", blob):
         states["publish"] = ("done", "PUBLISH_OK")
+        states["finish"] = ("done", "published")
+    elif exec_status == "error" and "WEBHOOK_TEST_NO_POST" in blob:
+        states["finish"] = ("failed", "WEBHOOK_TEST_NO_POST")
 
     # Mark pending steps after last known
     if states:

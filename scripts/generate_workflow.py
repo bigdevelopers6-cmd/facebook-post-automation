@@ -102,7 +102,7 @@ def smtp_email(name, position, subject_expr, body_expr, notes=None):
     return node(name, "n8n-nodes-base.emailSend", position, params, **kw)
 
 # Bumped each release — grep this on server to confirm deploy
-WORKFLOW_BUILD = "2026-05-30-trace-v7c-webhook-fastpath"
+WORKFLOW_BUILD = "2026-05-30-trace-v7d-split-bypass"
 
 # --- Code snippets ---
 COMPUTE_POST_TIMES = r"""// Scheduler: compute 10 randomized ET posting times
@@ -380,9 +380,7 @@ return articles.slice(0, 10).map((a, idx) => ({
 MERGE_SCHEDULE_ARTICLES = r"""const staticData = $getWorkflowStaticData('global');
 const schedule = staticData.todaySchedule || [];
 let items = $input.all().map(i => i.json);
-const __sdM=$getWorkflowStaticData('global');
-(__sdM.pipelineLog=__sdM.pipelineLog||[]).push('mergeSchedule: items='+items.length);
-console.log('[PIPELINE] mergeSchedule items='+items.length);
+const incoming = items.length;
 if (items.length === 0) {
   throw new Error('MERGE_SCHEDULE: No articles to post — NewsAPI empty or all URLs in posted cache. Run flush-cache.');
 }
@@ -390,6 +388,9 @@ if (staticData.singleSlotTest) {
   items = items.slice(0, 1);
   staticData.singleSlotTest = false;
 }
+const __sdM=$getWorkflowStaticData('global');
+(__sdM.pipelineLog=__sdM.pipelineLog||[]).push('mergeSchedule: items='+items.length+' incoming='+incoming);
+console.log('[PIPELINE] mergeSchedule items='+items.length);
 
 return items.map((article, idx) => {
   const slot = schedule[idx] || schedule[0];
@@ -1185,6 +1186,14 @@ if (items.length === 0) {
 return items;
 """
 
+PICK_FIRST_ARTICLE = r"""const items = $input.all();
+const __sdP=$getWorkflowStaticData('global');
+(__sdP.pipelineLog=__sdP.pipelineLog||[]).push('pickFirstArticle: n='+items.length);
+if (items.length === 0) {
+  throw new Error('pickFirstArticle: 0 items — logMergeStats failed');
+}
+return [items[0]];
+"""
 
 HEALTH_AGGREGATE = r"""const results = $input.all().map(i => i.json);
 return [{ json: { command: 'health-check', results } }];
@@ -1475,6 +1484,14 @@ N["passthroughNoFallback"] = add_node(node("passthroughNoFallback", "n8n-nodes-b
 }, typeVersion=2))
 N["mergeScheduleWithArticles"] = add_node(node("mergeScheduleWithArticles", "n8n-nodes-base.code", [X(10), Y1], {"jsCode": MERGE_SCHEDULE_ARTICLES}, typeVersion=2))
 N["logMergeStats"] = add_node(node("logMergeStats", "n8n-nodes-base.code", [X(10), Y1 + 80], {"jsCode": LOG_MERGE_STATS}, typeVersion=2))
+N["routeWebhookBatch"] = add_node(node(
+    "routeWebhookBatch", "n8n-nodes-base.if", [X(10), Y1 + 140],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "wb1", "leftValue": "={{ $getWorkflowStaticData('global').webhookTestMode === true }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
+))
+N["pickFirstArticle"] = add_node(node("pickFirstArticle", "n8n-nodes-base.code", [X(11), Y1 + 140], {"jsCode": PICK_FIRST_ARTICLE}, typeVersion=2))
 
 # === LOOP ===
 N["splitInBatches"] = add_node(node(
@@ -1866,6 +1883,13 @@ N["emailFlaggedPost"] = add_node(smtp_email(
 ))
 N["updatePostedURLs"] = add_node(node("updatePostedURLs", "n8n-nodes-base.code", [X(6), Y4], {"jsCode": UPDATE_POSTED_URLS}, typeVersion=2))
 N["loopBack"] = add_node(node("loopBack", "n8n-nodes-base.noOp", [X(7), Y4], {}, typeVersion=1))
+N["routeLoopEnd"] = add_node(node(
+    "routeLoopEnd", "n8n-nodes-base.if", [X(8), Y4],
+    {"conditions": {"options": {"caseSensitive": True, "leftValue": "", "typeValidation": "strict"},
+     "conditions": [{"id": "le1", "leftValue": "={{ $getWorkflowStaticData('global').webhookTestMode === true }}", "rightValue": True, "operator": {"type": "boolean", "operation": "equals"}}],
+     "combinator": "and"}},
+    typeVersion=2.2,
+))
 
 # === DAILY SUMMARY ===
 N["scheduleTrigger11PM"] = add_node(node(
@@ -2005,7 +2029,10 @@ wire("fetchFallbackNews", "fillRemainingSlots", 0)
 wire("fillRemainingSlots", "mergeScheduleWithArticles")
 wire("passthroughNoFallback", "mergeScheduleWithArticles")
 wire("mergeScheduleWithArticles", "logMergeStats")
-wire("logMergeStats", "splitInBatches")
+wire("logMergeStats", "routeWebhookBatch")
+wire("routeWebhookBatch", "pickFirstArticle", 0)  # webhook test — bypass splitInBatches
+wire("pickFirstArticle", "prepareSlotWait")
+wire("routeWebhookBatch", "splitInBatches", 1)  # scheduled multi-slot
 
 wire("splitInBatches", "prepareSlotWait", 0)  # current batch output
 wire("splitInBatches", "assertWebhookPost", 1)  # loop done — fail webhook if no PUBLISH_OK
@@ -2076,7 +2103,9 @@ wire("prepareFlaggedPostEmail", "emailFlaggedPost")
 wire("emailFlaggedPost", "updatePostedURLs")
 wire("checkFlaggedAudit", "updatePostedURLs", 1)
 wire("updatePostedURLs", "loopBack")
-wire("loopBack", "splitInBatches")
+wire("loopBack", "routeLoopEnd")
+wire("routeLoopEnd", "assertWebhookPost", 0)  # webhook single slot finished
+wire("routeLoopEnd", "splitInBatches", 1)  # next scheduled slot
 
 # Daily summary branch
 wire("scheduleTrigger11PM", "dailySummary")
